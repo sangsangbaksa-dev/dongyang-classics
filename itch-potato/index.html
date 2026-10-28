@@ -17,12 +17,12 @@ const c=document.getElementById('c'),g=c.getContext('2d'),W=360,H=480;
 const ACC=['감자','고구마(가짜)','감자(진짜)','감자튀김 전 단계'];
 const DEATH=['월급 루팡 실패','대파에 찔렸습니다','출근 지각 (사유: 감자라서)','당신은 이미 으깨졌습니다','퇴사 사유: 대파','감자인데 왜 날아다녀요?'];
 const RANDOM=['감자는 사실 채소입니다','대파: 나는 무기가 아니다','점심 뭐 먹지','월요일입니다','지금 이 게임 하는 시간에 출근하세요','상사: 감자 씨 보고서요','와! 감자!'];
-let st='title',x,y,vy,pipes,score,best=+localStorage.potato||0,t=0,shake=0,flip=false,msg='',msgT=0,deathMsg='',fakeLoad=0,flash=0,rot=0;
+let st='title',x=80,y=220,vy=0,pipes=[],score=0,best=+localStorage.potato||0,t=0,shake=0,flip=false,msg='',msgT=0,deathMsg='',fakeLoad=0,stall=0,flash=0,rot=0;
 function reset(){x=80;y=220;vy=0;pipes=[];score=0;t=0;flip=false;rot=0}
 function say(s){msg=s;msgT=120}
 let ac;function beep(f,d=.1,type='square'){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.value=.08;o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 function flap(){
-  if(st==='title'){st='load';fakeLoad=0;beep(300);return}
+  if(st==='title'){st='load';fakeLoad=0;stall=0;beep(300);return}
   if(st==='load'){return}
   if(st==='dead'){if(t>30){reset();st='play';beep(500)}return}
   vy=-6.2;beep(600+Math.random()*400,.08);
@@ -39,7 +39,7 @@ function die(){
 function update(){
   t++;
   if(shake>0)shake--;if(flash>0)flash--;if(msgT>0)msgT--;
-  if(st==='load'){fakeLoad+=Math.random()<.3?0.4:.9;if(fakeLoad>=100){reset();st='play'}else if(fakeLoad>69&&fakeLoad<70.5)fakeLoad=69.2+Math.random()*.2*(t%2);return}
+  if(st==='load'){if(fakeLoad>=69&&fakeLoad<69.5&&stall<90){stall++;return}fakeLoad+=Math.random()<.3?0.4:.9;if(fakeLoad>=100){reset();st='play'}return}
   if(st==='play'){
     vy+=.38;y+=vy;rot=Math.max(-.6,Math.min(1.2,vy*.1));
     if(t%95===0){const gy=90+Math.random()*220;pipes.push({x:W+20,gy,gap:130-Math.min(40,score*2),p:false})}
