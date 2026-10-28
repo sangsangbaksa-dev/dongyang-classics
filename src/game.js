@@ -90,22 +90,30 @@ function mkFighter(ch, side, ctl) {
     hp: ch.hp, maxhp: ch.hp, hpShow: ch.hp, meter: 0,
     state: 'idle', t: 0, anim: 0, move: null, stun: 0, shield: 0, counter: 0, invuln: 0,
     combo: 0, comboT: 0, maxCombo: 0, dmgDealt: 0, hitDone: false, lunge: false, cast: null,
-    flash: 0, ghosts: [], spd: 1, dmgMul: 1, meterMul: 1,
+    flash: 0, ghosts: [], spd: 1, dmgMul: 1, meterMul: 1, airAtk: false,
   };
 }
 
 const opp = f => (G.p[0] === f ? G.p[1] : G.p[0]);
 
+// 피격 판정(허트박스): 발 기준 폭 ±HURT_HW, 높이 HURT_H
+const HURT_HW = 26, HURT_H = 104;
+
 function getMove(f, kind) {
   const c = f.ch, air = f.y < GY - 1;
-  if (kind === 'light') {
-    return { kind, startup: 4, active: 3, rec: 9, dmg: c.lightDmg, reach: 64 * c.reach, y: air ? -70 : -92, h: air ? 65 : 52, kb: 3.5, stun: 14, hs: 4, gain: 7, launch: 0 };
+  if (air) { // 점프 공격: 발밑까지 내려가는 높은 판정, 낙하하며 길게 유지된다
+    if (kind === 'light') return { kind, air: true, startup: 3, active: 9, rec: 8, dmg: c.lightDmg + 1, reach: 72 * c.reach, y: -75, h: 135, kb: 4, stun: 15, hs: 4, gain: 7, launch: 0 };
+    return { kind, air: true, startup: 7, active: 10, rec: 12, dmg: c.heavyDmg, reach: 86 * c.reach, y: -80, h: 150, kb: 8, stun: 22, hs: 7, gain: 12, launch: 0 };
   }
-  return { kind, startup: 11, active: 4, rec: 17, dmg: c.heavyDmg, reach: 88 * c.reach, y: -98, h: 74, kb: 9, stun: 22, hs: 8, gain: 12, launch: -3 };
+  if (kind === 'light') {
+    return { kind, startup: 4, active: 4, rec: 9, dmg: c.lightDmg, reach: 66 * c.reach, y: -96, h: 62, kb: 3.5, stun: 14, hs: 4, gain: 7, launch: 0 };
+  }
+  return { kind, startup: 11, active: 5, rec: 17, dmg: c.heavyDmg, reach: 92 * c.reach, y: -105, h: 90, kb: 9, stun: 22, hs: 8, gain: 12, launch: -3 };
 }
 
 function startAttack(f, kind) {
   f.state = 'atk'; f.move = getMove(f, kind); f.t = 0; f.hitDone = false;
+  if (f.move.air) f.airAtk = true; // 점프당 한 번
   Sound.play(kind === 'heavy' ? 'heavy' : 'light');
 }
 
@@ -135,10 +143,10 @@ function proj(owner, o) {
 }
 
 function meleeHit(f, o, m) {
-  const x1 = f.x + f.face * 8, x2 = f.x + f.face * (8 + m.reach);
+  const x1 = f.x + f.face * (m.air ? -16 : 8), x2 = f.x + f.face * (8 + m.reach);
   const l = Math.min(x1, x2), r = Math.max(x1, x2);
   const top = f.y + m.y, bot = top + m.h;
-  return l < o.x + 22 && r > o.x - 22 && top < o.y && bot > o.y - 100 && resolveHit(f, o, m);
+  return l < o.x + HURT_HW && r > o.x - HURT_HW && top < o.y && bot > o.y - HURT_H && resolveHit(f, o, m);
 }
 
 function endFight(winner, timeout) {
@@ -322,7 +330,8 @@ function tickFighter(f, o) {
       if (I.heavy && m.kind === 'light') startAttack(f, 'heavy');
       else if (I.special && f.meter >= 50) beginCast(f, 'special');
     }
-    if (f.state === 'atk' && f.t >= m.startup + m.active + m.rec) { f.state = 'idle'; f.t = 0; }
+    // 점프 공격은 착지하면 후딜 없이 바로 풀린다
+    if (f.state === 'atk' && (f.t >= m.startup + m.active + m.rec || (m.air && ground && f.t >= m.startup + m.active))) { f.state = 'idle'; f.t = 0; }
     if (!ground && (I.l || I.r)) f.vx = (I.r - I.l) * f.ch.speed * f.spd * 0.7;
   } else if (f.state === 'cast') {
     const c = f.cast;
@@ -336,8 +345,8 @@ function tickFighter(f, o) {
     if (ground) f.face = Math.sign(o.x - f.x) || f.face;
     if (I.ult && f.meter >= 100 && ground) requestUlt(f);
     else if (I.special && f.meter >= 50) beginCast(f, 'special');
-    else if (I.heavy) startAttack(f, 'heavy');
-    else if (I.light) startAttack(f, 'light');
+    else if (I.heavy && (ground || !f.airAtk)) startAttack(f, 'heavy');
+    else if (I.light && (ground || !f.airAtk)) startAttack(f, 'light');
     else if (ground && I.block) { f.state = 'block'; f.vx = 0; }
     else {
       if (ground && I.u) { f.vy = f.ch.jump; Sound.play('jump'); dust(f.x, f.y, 5); }
@@ -361,7 +370,7 @@ function tickFighter(f, o) {
   f.y += f.vy;
   if (f.y >= GY) {
     if (fallV > 5 && f.state !== 'ko') dust(f.x, GY, 6);
-    f.y = GY; f.vy = 0;
+    f.y = GY; f.vy = 0; f.airAtk = false;
   }
   f.x += f.vx;
   if (f.y >= GY && f.state !== 'walk' && !f.lunge) f.vx *= f.state === 'ko' ? 0.9 : 0.8;
@@ -395,7 +404,7 @@ function tickProjs() {
       if (p.type === 'pillar') hitbox = p.life > p.maxLife - 6 ? [p.x - p.w / 2, GY - p.h, p.x + p.w / 2, GY] : null;
       else if (p.type === 'slash') hitbox = p.life > p.maxLife - 3 ? [p.x - 45, GY - 125, p.x + 45, GY] : null;
       else hitbox = [p.x - p.w / 2, p.y - p.h / 2, p.x + p.w / 2, p.y + p.h / 2];
-      if (hitbox && hitbox[0] < def.x + 22 && hitbox[2] > def.x - 22 && hitbox[1] < def.y && hitbox[3] > def.y - 100) {
+      if (hitbox && hitbox[0] < def.x + HURT_HW && hitbox[2] > def.x - HURT_HW && hitbox[1] < def.y && hitbox[3] > def.y - HURT_H) {
         if (resolveHit(owner, def, p)) { p.hit = true; if (!p.pierce && p.type !== 'pillar' && p.type !== 'slash') p.life = 0; }
       }
     }
@@ -457,6 +466,7 @@ function aiCtl(D) {
       coolSet(30); return I;
     }
     if (o.y < GY - 40 && d < 140 && st.cool === 0 && Math.random() < D.anti * 0.2) { I.heavy = 1; coolSet(30); return I; }
+    if (!ground && !f.airAtk && d < 110 && st.cool === 0 && Math.random() < 0.1) { I.light = 1; coolSet(20); return I; } // 점프 공격
 
     // 일반 계획
     if (--st.planT <= 0) {
