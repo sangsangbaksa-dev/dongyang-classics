@@ -7,7 +7,7 @@ const CHARS = [
   {
     id: 'confucius', name: '공자', hanja: '孔子', school: '유가', schoolHanja: '儒家',
     color: '#2f6f9f', accent: '#e9c46a', hat: 'guan', weapon: 'scroll',
-    hp: 100, speed: 3.3, jump: -13.2, reach: 1.0, lightDmg: 5, heavyDmg: 11,
+    hp: 99, speed: 3.3, jump: -13.2, reach: 1.0, lightDmg: 6, heavyDmg: 12,
     quote: '己所不欲 勿施於人',
     quoteKo: '내가 하고 싶지 않은 일은 남에게도 시키지 말라. (논어)',
     desc: '균형 잡힌 군자. 예(禮)로 상대의 공격을 받아쳐 되돌려 준다.',
@@ -18,7 +18,7 @@ const CHARS = [
   {
     id: 'zhuangzi', name: '장자', hanja: '莊子', school: '도가', schoolHanja: '道家',
     color: '#5b8a72', accent: '#d9e8d2', hat: 'bun', weapon: 'whisk',
-    hp: 95, speed: 3.6, jump: -14.4, reach: 1.05, lightDmg: 4, heavyDmg: 10,
+    hp: 96, speed: 3.6, jump: -14.4, reach: 1.05, lightDmg: 5, heavyDmg: 10,
     quote: '昔者莊周夢爲胡蝶',
     quoteKo: '예전에 장주가 꿈에 나비가 되었다. (장자·제물론)',
     desc: '가볍고 높이 뛴다. 나비를 날려 보내 멀리서 괴롭히는 견제형.',
@@ -29,7 +29,7 @@ const CHARS = [
   {
     id: 'hanfei', name: '한비자', hanja: '韓非', school: '법가', schoolHanja: '法家',
     color: '#8e2f3a', accent: '#c9b27c', hat: 'crown', weapon: 'blade',
-    hp: 105, speed: 3.0, jump: -12.8, reach: 1.1, lightDmg: 5, heavyDmg: 13,
+    hp: 115, speed: 3.3, jump: -13.0, reach: 1.1, lightDmg: 6, heavyDmg: 14,
     quote: '法不阿貴 繩不撓曲',
     quoteKo: '법은 귀한 자에게 아부하지 않고, 먹줄은 굽은 것에 휘지 않는다. (한비자)',
     desc: '묵직한 한 방. 상대의 발밑에 형벌의 기둥을 세워 올려친다.',
@@ -40,7 +40,7 @@ const CHARS = [
   {
     id: 'mozi', name: '묵자', hanja: '墨子', school: '묵가', schoolHanja: '墨家',
     color: '#5a4a3a', accent: '#e0a458', hat: 'band', weapon: 'staff',
-    hp: 115, speed: 2.9, jump: -12.6, reach: 0.95, lightDmg: 5, heavyDmg: 10,
+    hp: 106, speed: 2.9, jump: -12.6, reach: 0.95, lightDmg: 5, heavyDmg: 9,
     quote: '兼相愛 交相利',
     quoteKo: '널리 서로 사랑하고 서로 이롭게 하라. (묵자·겸애)',
     desc: '튼튼한 수비의 달인. 겸애의 방패로 몸을 지키고 상처를 회복한다.',
@@ -51,7 +51,7 @@ const CHARS = [
   {
     id: 'sunzi', name: '손자', hanja: '孫子', school: '병가', schoolHanja: '兵家',
     color: '#2e3b4e', accent: '#d4a017', hat: 'helmet', weapon: 'spear',
-    hp: 90, speed: 4.2, jump: -13.8, reach: 1.2, lightDmg: 4, heavyDmg: 11,
+    hp: 92, speed: 4.1, jump: -13.8, reach: 1.2, lightDmg: 4, heavyDmg: 11,
     quote: '知彼知己 百戰不殆',
     quoteKo: '적을 알고 나를 알면 백 번 싸워도 위태롭지 않다. (손자병법)',
     desc: '가장 빠른 속공형. 창을 앞세워 순식간에 파고든다.',
@@ -62,7 +62,7 @@ const CHARS = [
   {
     id: 'gongsun', name: '공손룡', hanja: '公孫龍', school: '명가', schoolHanja: '名家',
     color: '#8d8aa8', accent: '#f4f1de', hat: 'scholar', weapon: 'fan',
-    hp: 95, speed: 3.4, jump: -13.4, reach: 1.0, lightDmg: 4, heavyDmg: 12,
+    hp: 99, speed: 3.4, jump: -13.4, reach: 1.0, lightDmg: 5, heavyDmg: 12,
     quote: '白馬非馬',
     quoteKo: '흰 말은 말이 아니다. (공손룡자)',
     desc: '논리의 궤변가. 말이 아닌 말(白馬)을 불러내 정면으로 돌파한다.',

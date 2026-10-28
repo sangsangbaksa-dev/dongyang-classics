@@ -207,7 +207,7 @@ function resolveHit(att, def, h) {
     spawn('spark', def.x, def.y - 70, 14, '#ffd86b', 9);
     floatText('禮 반격!', def.x, def.y - 130, '#ffd86b', 30);
     Sound.play('block'); G.hitstop = 14; G.shake = 10;
-    dealHit(def, att, { dmg: 16, kb: 12, stun: 26, launch: -6, hs: 0, gain: 10 }, -dir, false);
+    dealHit(def, att, { dmg: 18, kb: 12, stun: 26, launch: -6, hs: 0, gain: 10 }, -dir, false);
     return true;
   }
   if (def.shield > 0) {
@@ -249,32 +249,32 @@ function heal(f, n) {
 
 const SPECIALS = {
   confucius: { cost: 50, total: 46, tick(f, o, t) { if (t === 1) f.counter = 38; } },
-  zhuangzi:  { cost: 50, total: 34, tick(f, o, t) { if (t === 14) butterflies(f, 3, 6, 30); } },
-  hanfei:    { cost: 50, total: 42, tick(f, o, t) { if (t === 16) pillarAt(f, o, 16, 26, 28); } },
-  mozi:      { cost: 50, total: 38, tick(f, o, t) { if (t === 12) { heal(f, 12); f.shield = 1; } } },
+  zhuangzi:  { cost: 50, total: 34, tick(f, o, t) { if (t === 14) butterflies(f, 3, 7, 30); } },
+  hanfei:    { cost: 50, total: 42, tick(f, o, t) { if (t === 16) pillarAt(f, o, 20, 22, 28); } },
+  mozi:      { cost: 50, total: 38, tick(f, o, t) { if (t === 12) { heal(f, 8); f.shield = 1; } } },
   sunzi: {
     cost: 50, total: 28,
     tick(f, o, t) {
       if (t === 1) { f.lunge = true; f.invuln = 24; }
       if (t === 6) f.vx = f.face * 17;
       if (t >= 6 && t <= 17 && !f.hitDone) {
-        if (meleeHit(f, o, { dmg: 14, reach: 56, y: -100, h: 90, kb: 11, stun: 24, hs: 8, launch: -6, gain: 10 })) { f.hitDone = true; f.vx = 0; }
+        if (meleeHit(f, o, { dmg: 13, reach: 56, y: -100, h: 90, kb: 11, stun: 24, hs: 8, launch: -6, gain: 10 })) { f.hitDone = true; f.vx = 0; }
       }
       if (t === 18) f.vx = 0;
     },
   },
-  gongsun:   { cost: 50, total: 36, tick(f, o, t) { if (t === 14) horse(f, 15); } },
+  gongsun:   { cost: 50, total: 36, tick(f, o, t) { if (t === 14) horse(f, 17); } },
 };
 
 const ULTS = {
   confucius: { cost: 100, total: 60, tick(f, o, t) {
-    if (t === 20) proj(f, { type: 'wave', x: f.x + f.face * 60, y: f.y - 80, vx: f.face * 7, w: 200, h: 200, dmg: 28, kb: 14, stun: 34, hs: 12, launch: -7, life: 120, pierce: true, color: '#7fc4ff', glyph: '仁', gain: 0 });
+    if (t === 20) proj(f, { type: 'wave', x: f.x + f.face * 60, y: f.y - 80, vx: f.face * 7, w: 200, h: 200, dmg: 30, kb: 14, stun: 34, hs: 12, launch: -7, life: 120, pierce: true, color: '#7fc4ff', glyph: '仁', gain: 0 });
   } },
-  zhuangzi: { cost: 100, total: 60, tick(f, o, t) { if (t === 20) butterflies(f, 8, 4, 70); } },
-  hanfei: { cost: 100, total: 150, tick(f, o, t) { if (t >= 20 && t <= 120 && (t - 20) % 25 === 0) pillarAt(f, o, 6, 18, 20); } },
+  zhuangzi: { cost: 100, total: 60, tick(f, o, t) { if (t === 20) butterflies(f, 8, 5, 70); } },
+  hanfei: { cost: 100, total: 150, tick(f, o, t) { if (t >= 20 && t <= 120 && (t - 20) % 25 === 0) pillarAt(f, o, 7, 18, 20); } },
   mozi: { cost: 100, total: 64, tick(f, o, t) {
     if (t === 20) {
-      heal(f, 20); f.shield = 2;
+      heal(f, 12); f.shield = 1;
       proj(f, { type: 'wave', x: f.x + f.face * 60, y: f.y - 80, vx: f.face * 6, w: 190, h: 190, dmg: 18, kb: 12, stun: 30, hs: 10, launch: -6, life: 110, pierce: true, color: '#ffcf70', glyph: '非', gain: 0 });
     }
   } },
@@ -287,7 +287,7 @@ const ULTS = {
     }
     if (t >= 24 && t <= 94 && (t - 24) % 14 === 0) { slashAt(f, o, ((t - 24) / 14) % 2 ? 0.6 : -0.6); Sound.play('light'); }
   } },
-  gongsun: { cost: 100, total: 96, tick(f, o, t) { if (t === 20 || t === 44 || t === 68) horse(f, 10); } },
+  gongsun: { cost: 100, total: 96, tick(f, o, t) { if (t === 20 || t === 44 || t === 68) horse(f, 12); } },
 };
 
 function beginCast(f, kind) {
@@ -458,6 +458,7 @@ function aiCtl(D) {
     if (st.dodge > 0) { st.dodge--; if (st.dodgeDir > 0) I.r = 1; else I.l = 1; return I; }
     if (st.blk > 0 && ground) { st.blk--; I.block = 1; return I; }
 
+    if (f.ch.id === 'confucius' && f.meter >= 50 && o.state === 'atk' && o.move && o.t <= 4 && d < o.move.reach + 60 && st.cool === 0 && Math.random() < D.react + 0.25) { I.special = 1; coolSet(40); return I; }
     // 극의 / 필살기
     if (f.meter >= 100 && d < 420 && st.cool === 0 && Math.random() < D.ult) { I.ult = 1; coolSet(60); return I; }
     if (f.meter >= 50 && d > 120 && d < 360 && st.cool === 0 && Math.random() < D.ult * 1.2) { I.special = 1; coolSet(50); return I; }
@@ -498,9 +499,9 @@ function aiCtl(D) {
 
 // ---------------------------------------------------------------- 장면 전환
 
-function startFight(playerChar) {
+function startFight(playerChar, forcedEnemy) {
   const others = CHARS.filter(c => c !== playerChar);
-  const enemyChar = others[Math.floor(Math.random() * others.length)];
+  const enemyChar = forcedEnemy || others[Math.floor(Math.random() * others.length)];
   const D = DIFFS[G.diff];
   const enemy = mkFighter(enemyChar, 1, aiCtl(D));
   enemy.maxhp = enemy.hp = enemy.hpShow = Math.round(enemyChar.hp * D.hp);
@@ -864,4 +865,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // 자동 테스트용 훅
-window.__game = { G, startFight, CHARS, setScene, update };
+window.__game = { G, startFight, CHARS, setScene, update, aiCtl };
