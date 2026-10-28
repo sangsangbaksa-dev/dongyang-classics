@@ -310,9 +310,11 @@ function drawArm(g, sx, sy, ang, len, col, w0, w1) {
 // f: {ch, x, y, face, state, t, anim, move, ...}. scale 로 도감용 축소도 가능.
 function drawFighter(g, f, scale = 1, opts = {}) {
   const ch = f.ch, P = getPose(f);
-  const alpha = f.invuln > 0 && f.invuln % 6 < 3 && f.state !== 'cast' ? 0.45 : 1;
+  const alpha = (f.invuln > 0 && f.invuln % 6 < 3 && f.state !== 'cast' ? 0.45 : 1) * (opts.alpha === undefined ? 1 : opts.alpha);
   g.save();
   g.globalAlpha = alpha;
+  if (f.flash > 0) g.filter = 'brightness(2.6) saturate(0.35)'; // 피격 플래시 (미지원 브라우저에서는 무시)
+  const sway = Math.sin(f.anim * 0.1) * 1.5 - clamp((f.vx || 0) * f.face, -6, 6) * 1.1;
 
   // 그림자
   const air = clamp((GY - f.y) / 160, 0, 1);
@@ -365,13 +367,13 @@ function drawFighter(g, f, scale = 1, opts = {}) {
   g.fillStyle = sleeve;
   g.beginPath();
   g.moveTo(lean - 15, shY); g.lineTo(lean + 15, shY);
-  g.quadraticCurveTo(lean * 0.6 + 22, hipY, 24, -12 + y0 * 0.3);
-  g.lineTo(-24, -12 + y0 * 0.3);
+  g.quadraticCurveTo(lean * 0.6 + 22, hipY, 24 + sway, -12 + y0 * 0.3);
+  g.quadraticCurveTo(sway * 0.5, -8 + y0 * 0.3, -24 + sway, -12 + y0 * 0.3);
   g.quadraticCurveTo(lean * 0.6 - 22, hipY, lean - 15, shY); g.closePath(); g.fill();
   g.fillStyle = sleeveLight; // 옷깃
   g.beginPath(); g.moveTo(lean - 6, shY); g.lineTo(lean + 8, hipY + 6); g.lineTo(lean + 14, shY); g.lineTo(lean + 2, shY + 8); g.closePath(); g.fill();
   g.fillStyle = ch.accent; g.fillRect(lean * 0.5 - 17, hipY - 2, 34, 6); // 허리띠
-  g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-24, -16 + y0 * 0.3, 48, 4);
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-24 + sway, -16 + y0 * 0.3, 48, 4);
 
   // 머리
   const hx = lean * 1.1, hy = -96 + y0 * 1.2;
@@ -496,6 +498,8 @@ function drawParticles(g, parts) {
       case 'spark':
         g.strokeStyle = p.color; g.lineWidth = 3 * k + 1; g.beginPath();
         g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * 2.2, p.y - p.vy * 2.2); g.stroke(); break;
+      case 'dust':
+        g.fillStyle = 'rgba(216,200,168,' + (0.45 * k) + ')'; g.beginPath(); g.arc(p.x, p.y, p.size * (1.6 - k * 0.6), 0, 7); g.fill(); break;
       case 'ring':
         g.strokeStyle = p.color; g.lineWidth = 5 * k + 1; g.beginPath(); g.arc(p.x, p.y, p.size * (1 - k) + 6, 0, 7); g.stroke(); break;
       case 'text':

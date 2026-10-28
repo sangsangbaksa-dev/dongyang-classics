@@ -81,5 +81,21 @@ const STAGES = {
   lake:        { name: '조나라 연못', top: '#232c47', bot: '#5c6a8f', sun: '#f4f1de', m: ['#3f4a6c', '#2e3856', '#1e2640'], ground: '#1e2433', grass: '#3f5a6a' },
 };
 
+// 난이도. hp/dmg/speed/meter 는 상대(CPU)의 능력 배율, 나머지는 AI 판단 확률이다.
+//  react: 상대 공격을 보고 막을 확률, proj: 투사체 회피, punish: 빈틈 응징, anti: 대공,
+//  combo: 적중 후 연계, ult: 극의/필살기 사용, cool: 공격 간격 배율, think: 판단 주기 배율
+const DIFFS = [
+  { id: 'easy',       name: '하',     hanja: '下',   color: '#8fd0a0', desc: '입문. 상대가 느리고 약하며 거의 막지 못한다.',
+    hp: 0.8,  dmg: 0.7,  speed: 0.92, meter: 0.8, react: 0.02, proj: 0.0,  punish: 0.0,  anti: 0.0,  combo: 0.1,  ult: 0.0,   cool: 1.6,  think: 1.4 },
+  { id: 'normal',     name: '중',     hanja: '中',   color: '#e9c46a', desc: '표준. 기본기를 막고 가끔 필살기를 쓴다.',
+    hp: 1.0,  dmg: 1.0,  speed: 1.0,  meter: 1.0, react: 0.12, proj: 0.1,  punish: 0.05, anti: 0.1,  combo: 0.25, ult: 0.015, cool: 1.0,  think: 1.0 },
+  { id: 'hard',       name: '상',     hanja: '上',   color: '#f0a050', desc: '도전. 빈틈을 찌르고 연계하며 투사체를 피한다.',
+    hp: 1.1,  dmg: 1.1,  speed: 1.05, meter: 1.2, react: 0.35, proj: 0.35, punish: 0.3,  anti: 0.4,  combo: 0.5,  ult: 0.03,  cool: 0.75, think: 0.8 },
+  { id: 'expert',     name: '최상',   hanja: '極',   color: '#e8643c', desc: '고수. 대부분의 공격에 반응하고 확실히 응징한다.',
+    hp: 1.25, dmg: 1.2,  speed: 1.1,  meter: 1.5, react: 0.6,  proj: 0.6,  punish: 0.55, anti: 0.7,  combo: 0.75, ult: 0.06,  cool: 0.5,  think: 0.6 },
+  { id: 'impossible', name: '불가능', hanja: '絶',   color: '#c0392b', desc: '천하무적. 체력과 공격력이 압도적이고 거의 실수하지 않는다.',
+    hp: 1.6,  dmg: 1.5,  speed: 1.2,  meter: 2.2, react: 0.88, proj: 0.85, punish: 0.85, anti: 0.95, combo: 0.95, ult: 0.12,  cool: 0.3,  think: 0.4 },
+];
+
 const KEYS_P1 = { left: 'KeyA', right: 'KeyD', up: 'KeyW', block: 'KeyS', light: 'KeyJ', heavy: 'KeyK', special: 'KeyL', ult: 'KeyU' };
 const KEYS_P2 = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', block: 'ArrowDown', light: 'Comma', heavy: 'Period', special: 'Slash', ult: 'Semicolon' };
