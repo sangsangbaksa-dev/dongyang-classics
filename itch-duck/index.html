@@ -17,7 +17,11 @@ const c=document.getElementById('c'),g=c.getContext('2d'),W=360,H=480;
 const SH=[{n:'1교대',time:'22:00',spd:1,sub:'시급 150원. 오리니까 괜찮다.'},{n:'2교대',time:'02:00',spd:1.25,sub:'손님이 점점 이상해진다.'},{n:'3교대',time:'05:00',spd:1.5,sub:'해가 뜨면 사장님이 온다.'}];
 const FIRE=['사유: 손이 느림','사유: 오리라서','사유: 그냥','사유: 사장님 기분','사유: 바코드가 널 싫어함','사유: 꽥 소리가 큼'];
 const BAGS=['네','아니요','20원 봉투요','카드로요','종이로요','꽥'];
+const CUST=['손님: 이거 데워주세요 (아이스크림)','손님: 봉지 필요 없는데 봉지에 담아주세요','손님: 어제 산 건데 환불 (먹음)','손님: 담배... 아니 껌이요','손님: 와이파이 비번 뭐예요','손님: 나 단골인데 깎아줘 (처음 옴)','손님: 사장 나와','손님: 오리가 왜 일해요?','손님: 꽥','손님: 이 도시락 왜 아직 따뜻해요 (방금 먹다 남김)','손님: 컵라면 끓여주세요 (집에서 가져옴)','손님: 1+1이면 2개 주는 거죠? (1개 삼)'];
+const TRASH=[{e:'🍕',a:'음식물'},{e:'🥤',a:'재활용'},{e:'🦆',a:'사장님'},{e:'🧦',a:'일반'},{e:'🥔',a:'음식물'},{e:'💼',a:'사장님'},{e:'📦',a:'재활용'}];
+const TOPT={'음식물':['일반','음식물','재활용'],'재활용':['일반','음식물','재활용'],'일반':['일반','음식물','재활용'],'사장님':['음식물','사장님','재활용']};
 const DOTS=['2027.03.14','2026.11.02','2027.01.30','2026.12.25'];
+let cam=[{e:'🐔',x:60,y:300,v:.5},{e:'🦆',x:260,y:380,v:-.4},{e:'🐀',x:150,y:440,v:.9}];
 let st='title',t=0,shake=0,flash=0,lives=3,shift=0,idx=0,list=[],cur=null,tG=0,spd=1,fired='',adT=0,boss=false,sevT=0,endT=0,wins=0,saved=0,msgT=0,msg='';
 try{saved=+localStorage.duckClear||0}catch(e){}
 let ac;function beep(f,d=.1,type='square',v0=.08){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(v0,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
@@ -82,6 +86,20 @@ const GAMES=[
 {id:'still',timeoutWin:true,make:s=>({title:'움직이지 마!',dur:200,bg:'#202030',timeoutWin:true,
   draw(){ctr('👀',180,230,130);if(this.t>95)txt('지금 누르면 보너스 천원!',180,360,18,'#ff0','#000');txt('사장님이 보고 있다',180,420,15,'#888')},
   down(){this.res=-1}})},
+{id:'dance',make:s=>{const n=s>=1.5?5:4;const seq=[];for(let i=0;i<n;i++)seq.push(Math.random()<.5?'L':'R');
+  return {title:'오리 춤춰! 순서 외워서 좌우 클릭',dur:Math.floor(360/s),bg:'#ffe6fa',seq,p:0,
+  draw(){ctr('🦆',180+Math.sin(this.t*.2)*10,330,90);if(this.t<Math.floor(100/s)){seq.forEach((q,i)=>ctr(q==='L'?'⬅️':'➡️',60+i*(240/(n-1)),150,46))}else{txt('순서를 기억해라 ('+this.p+'/'+n+')',180,150,18,'#a3a')}
+    txt('◀ 왼쪽',90,430,20,'#555');txt('오른쪽 ▶',270,430,20,'#555')},
+  down(x){if(this.t<Math.floor(100/s))return;const q=x<180?'L':'R';if(q===seq[this.p]){this.p++;beep(500+this.p*60,.06);if(this.p>=n)this.res=1}else this.res=-1}}}},
+{id:'trash',make:s=>{const it=pick(TRASH);const opts=shuf(TOPT[it.a]).map((o,i)=>({o,r:[70,250+i*70,220,56]}));
+  return {title:'분리수거! 이건 어디에?',dur:Math.floor(270/s),bg:'#e8ffe8',
+  draw(){ctr(it.e,180,150,92);for(const b of opts)btn(b.r,b.o,'#397')},
+  down(x,y){for(const b of opts)if(inR(x,y,b.r))this.res=b.o===it.a?1:-1},it,opts}}},
+{id:'skip',make:s=>{const cs=[[10,56],[274,56],[10,430],[274,430],[274,248]];const r=pick(cs);
+  return {title:'광고 건너뛰기! (버튼을 찾아라)',dur:Math.floor(330/s),bg:'#fff',sr:[r[0],r[1],76,26],
+  draw(){txt('[광고]',180,170,22,'#d00');ctr('🍗🦆🍟',180,250,60);txt('지금 안 사면 후회합니다',180,320,16,'#444');txt('(사실 후회 안 함)',180,345,12,'#999');
+    if(this.t>this.dur*.42){g.fillStyle='#ccc';g.fillRect(...this.sr);g.strokeStyle='#666';g.lineWidth=1;g.strokeRect(...this.sr);txt('건너뛰기 ▶',this.sr[0]+38,this.sr[1]+13,11,'#333')}},
+  down(x,y){if(this.t>this.dur*.42&&inR(x,y,this.sr))this.res=1}}}},
 {id:'math',make:s=>{const a=pick([500,1000,1500,2000,2500,3000]),b=pick([500,1000,1500,2000,2500]);const sum=a+b;const ch=shuf([sum,sum+500,sum-500]).map((v,i)=>({v,r:[70,230+i*70,220,56]}));
   return {title:'계산해! '+a+'원 + '+b+'원',dur:Math.floor(330/s),bg:'#e8f5ff',ch,sum,
   draw(){ctr('🧮',180,150,70);for(const o of ch)btn(o.r,o.v+'원','#36c')},
@@ -90,7 +108,7 @@ const GAMES=[
 
 // ===== 진행 =====
 function pickList(n){return shuf(GAMES.map((_,i)=>i)).slice(0,n)}
-function startMicro(gi){cur=GAMES[gi].make(spd);cur.t=0;cur.res=0;st='intro';tG=0}
+function startMicro(gi){cur=GAMES[gi].make(spd);cur.t=0;cur.res=0;cur.q=pick(CUST);st='intro';tG=0}
 function startShift(){boss=false;spd=SH[shift].spd;lives=3;idx=0;list=pickList(6);st='shiftintro';tG=0;beep(660,.2)}
 function startBoss(){boss=true;spd=1.85;lives=2;idx=0;list=pickList(3);st='shiftintro';tG=0;beep(110,.6,'sawtooth')}
 function nextGame(){idx++;
@@ -114,7 +132,7 @@ c.addEventListener('pointerup',e=>pup(...xy(e)));
 c.addEventListener('pointermove',e=>pmove(...xy(e)));
 addEventListener('pointerup',()=>{if(st==='play'&&cur&&cur.held)cur.up()});
 function update(){
-  t++;if(shake>0)shake--;if(flash>0)flash--;if(msgT>0)msgT--;
+  t++;for(const k of cam){k.x+=k.v;if(k.x>380)k.x=-20;if(k.x<-20)k.x=380}if(shake>0)shake--;if(flash>0)flash--;if(msgT>0)msgT--;
   if(st==='shiftintro'){tG++;if(tG>(boss?150:110)){startMicro(list[0])}}
   else if(st==='intro'){tG++;if(tG>=Math.max(34,Math.floor(72/spd)))st='play'}
   else if(st==='play'){
@@ -124,7 +142,7 @@ function update(){
   }
   else if(st==='result'){tG++;if(tG>45){
     if(cur.res<0&&lives<=0){st='fired';tG=0;fired=pick(FIRE)}
-    else if(cur.res>0&&!boss&&Math.random()<.14){st='ad';adT=0}
+    else if(cur.res>0&&!boss&&Math.random()<.2){st='ad';adT=0}
     else nextGame()}}
   else if(st==='ad'){adT++;if(adT>110)nextGame()}
   else if(st==='fired')tG++;
@@ -156,13 +174,14 @@ function draw(){
     else{txt(SH[shift].n+'  '+SH[shift].time,180,200,34,'#ffe14d','#000');txt(SH[shift].sub,180,250,15,'#fff');txt('목숨 3개 · 게임 6개',180,285,14,'#9ab');ctr('🦆',180,370,70)}
   }
   if(st==='intro'||st==='play'||st==='result'){
+    g.globalAlpha=.3;for(const k of cam)ctr(k.e,k.x,k.y,34);g.globalAlpha=1;
     if(st!=='intro')cur.draw();
     else{ctr('⏳',180,260,80)}
     hud();
-    if(st==='intro'){txt(cur.title,180,110,cur.title.length>12?22:28,'#fff','#000')}
+    if(st==='intro'){txt(cur.title,180,110,cur.title.length>12?22:28,'#fff','#000');txt(cur.q,180,160,12,'#223')}
     else if(st==='play'){txt(cur.title,180,50,cur.title.length>14?15:18,'#222');
       g.fillStyle='rgba(0,0,0,.3)';g.fillRect(20,466,320,8);g.fillStyle='#e33';g.fillRect(20,466,320*(1-cur.t/cur.dur),8)}
-    if(st==='result'){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,170,W,120);txt(cur.res>0?'⭕ 성공!':'❌ 실패',180,215,40,cur.res>0?'#7f7':'#f66','#000');txt(cur.res>0?pick(['꽥!','오!','일은 잘하네','월급은 안 오름']):pick(['꽥...','손이 미끄러졌다고 하세요','사장님 보고 있음','방금 그거 피할 수 있었음']),180,262,16,'#fff','#000')}
+    if(st==='result'){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,170,W,120);txt(cur.res>0?'⭕ 성공!':'❌ 실패',180,215,40,cur.res>0?'#7f7':'#f66','#000');txt(cur.res>0?pick(['꽥!','오!','일은 잘하네','월급은 안 오름','사장님이 못 본 척함','방금 그건 운이었음','손님이 팁 대신 한숨을 줌','CCTV가 박수침']):pick(['꽥...','손이 미끄러졌다고 하세요','사장님 보고 있음','방금 그거 피할 수 있었음','손님이 리뷰 1점 남김','오리라서 어쩔 수 없음','CCTV가 비웃음']),180,262,16,'#fff','#000')}
   }
   if(st==='ad'){
     g.fillStyle='#fff';g.fillRect(0,0,W,H);txt('[광고]',180,100,22,'#d00');ctr('🍗🦆',180,220,76);txt('오리고기 1+1',180,300,28,'#d00');txt('(동족 아님. 아마도)',180,335,14,'#666');

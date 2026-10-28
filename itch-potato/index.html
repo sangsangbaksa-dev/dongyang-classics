@@ -18,7 +18,7 @@ let STAGE_FR=1800; // 스테이지 1개 = 30초(60틱). 5스테이지 + 가짜 �
 const BOSS_HP=30;
 const STAGES=[
  {n:'출근길',sub:'이번 스테이지는 쉽습니다 (거짓말)',bg:'#87ceeb',gr:'#8b5a2b',sp:2.7,gap:154,d:130,boss:0,fake:0},
- {n:'와이파이 불안정',sub:'📶 입력이 가끔 늦게 도착합니다',bg:'#b9c3cc',gr:'#555',sp:2.8,gap:152,d:130,boss:1,fake:.25,lag:1},
+ {n:'와이파이 불안정',sub:'📶 입력이 가끔 늦게 도착합니다',bg:'#b9c3cc',gr:'#555',sp:2.7,gap:164,d:105,boss:.5,fake:.1,lag:1},
  {n:'대파가 도망간다',sub:'대파는 가만히 있지 않는다',bg:'#f0a060',gr:'#6b3a1a',sp:2.8,gap:154,d:120,boss:1,fake:.3,mv:1},
  {n:'중력 반전',sub:'위가 아래고 아래가 위다 (가끔)',bg:'#c9a3e0',gr:'#4a2a6a',sp:2.9,gap:154,d:120,boss:1,fake:.3,grav:1},
  {n:'수줍은 대파',sub:'대파는 가까이 가면 흐려진다',bg:'#1a2240',gr:'#111',sp:2.9,gap:168,d:115,boss:1,fake:.25,ghost:1}
@@ -66,10 +66,10 @@ function press(px,py){
     respawn();beep(500);bannerT=stage===5?0:0;return
   }
   if(st==='ending'){if(endT>END_FIN+260){stage=0;clearSave();st='title';t=0}return}
-  if(lagNow()){lagQ.push(playFr+10)}else doFlap();
+  if(lagNow()){lagQ.push(playFr+8)}else doFlap();
 }
 function doFlap(){vy=-6.2*gdir;beep(600+Math.random()*400,.08);if(Math.random()<.02)say('뿌우웅')}
-function lagNow(){return stage===1&&stageT%600>=420}
+function lagNow(){return stage===1&&stageT%600>=480}
 c.addEventListener('pointerdown',e=>{const r=c.getBoundingClientRect();press((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H)});
 addEventListener('keydown',e=>{
   if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();press(-1,-1)}
@@ -141,7 +141,7 @@ function update(){
   playFr++;stageT++;
   const S=STAGES[Math.min(stage,4)];
   while(lagQ.length&&lagQ[0]<=playFr){lagQ.shift();doFlap()}
-  if(S.lag&&stageT%600===360)say('📶 와이파이 끊김 3초 전!! (입력 지연)');
+  if(S.lag&&stageT%600===360)say('📶 와이파이 끊김 2초 전!! (입력 지연)');
   if(S.grav&&stage<5){const ng=gravDir();if(ng!==gdir){gdir=ng;vy=0;say(ng<0?'중력 반전! (탭하면 내려감)':'중력 정상화 (일단은)')}}
   if(S.mv&&stageT===60)say('대파가 흔들리면 도망갑니다');
   if(stage===4&&stageT===60)say('대파가 점점 흐려집니다. 외우세요.');

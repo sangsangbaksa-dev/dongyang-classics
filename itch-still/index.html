@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>가만히 감자 챌린지</title>
+<style>
+html,body{margin:0;height:100%;background:#10161c;overflow:hidden;font-family:"Comic Sans MS","Malgun Gothic",sans-serif;user-select:none;-webkit-user-select:none}
+#wrap{height:100%;display:flex;align-items:center;justify-content:center}
+canvas{background:#e8f4ec;max-width:100%;max-height:100%;aspect-ratio:3/4;cursor:default}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="360" height="480"></canvas></div>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d'),W=360,H=480;
+const ALL=['toast','lie','popup','shake','bait','flash','phone','freeze','fakefail','flip'];
+const LV=[
+ {n:'워밍업',dur:10,p:.2,fx:['toast','lie'],q:'숨 쉬는 건 아직 허용'},
+ {n:'방해 시작',dur:20,p:.34,fx:['toast','lie','popup','shake','bait'],q:'눈 깜빡임도 감시 중'},
+ {n:'전화 왔어요',dur:30,p:.44,fx:['toast','lie','popup','shake','bait','flash','phone'],q:'엄마는 포기를 모른다'},
+ {n:'응답 없음',dur:45,p:.52,fx:ALL,q:'프로그램이 응답하지 않습니다'},
+ {n:'최종: 가만히 있는 감자',dur:60,p:.66,fx:ALL,q:'감자는 원래 가만히 있다'}
+];
+const TOAST=['방금 움직이셨나요?','손가락이 떨리는 게 보입니다','마우스가 의심스럽습니다','옆 사람이 당신을 보고 있습니다','숨 쉬는 소리가 큽니다','눈 깜빡임 감지됨 (괜찮음)','가렵지 않나요?','엉덩이 들썩임 감지','배터리 1%','지금 클릭하면 100만원','당신 뒤에 누가 있어요','참을 인 세 번이면 감자도 산다','방금 의자가 삐걱했는데요','오른손 가만히 있는 척 하는 중?'];
+const POPUPS=['🎉 경품 당첨! 지금 확인하세요','⚠ 바이러스 3,481개 발견','💰 월급 입금됨 (클릭)','📢 [긴급] 당신의 마우스가 의심됩니다'];
+const FAILQ=['감자는 원래 가만히 있는데','손이 먼저 나갔죠?','다시 해도 똑같을걸요','엉덩이에 불이 붙었나요','참을성 감자 미만'];
+const ENDQ=['당신은 총 {m}분 동안 가만히 있었습니다.','이 기록은 아무에게도 알려지지 않습니다.','이제 움직이셔도 됩니다.','...라고 하면 안 움직일 줄 알았죠?','수고하셨습니다.'];
+let st='title',t=0,lv=0,tl=0,acc=0,fails=0,total=0,best=0,cause='',lastPx=0,pct=0;
+let toast='',toastT=0,off=0,popup=null,bait=null,phoneT=0,freezeT=0,fakeT=0,flipT=0,flashT=0,shake=0,clrT=0,rdy=0,endT=0,last=null,frozenShown=0,lieAt=0;
+try{best=+localStorage.stillBest||0;fails=+localStorage.stillFails||0}catch(e){}
+let ac;function beep(f,d=.1,type='square',v0=.07){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(v0,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.random()*a.length|0];
+const inR=(x,y,r)=>x>=r[0]&&x<=r[0]+r[2]&&y>=r[1]&&y<=r[1]+r[3];
+function txt(s,x,y,size,col,out){g.font='bold '+size+'px "Comic Sans MS","Malgun Gothic",sans-serif';g.textAlign='center';g.textBaseline='middle';if(out){g.strokeStyle=out;g.lineWidth=5;g.lineJoin='round';g.strokeText(s,x,y)}g.fillStyle=col;g.fillText(s,x,y)}
+function emo(s,x,y,size){g.font=size+'px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s,x,y)}
+function btn(r,label,col){g.fillStyle=col;g.fillRect(r[0],r[1],r[2],r[3]);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(r[0],r[1],r[2],r[3]);txt(label,r[0]+r[2]/2,r[1]+r[3]/2,17,'#fff')}
+const fmt=s=>Math.max(0,s).toFixed(1);
+function startReady(){st='ready';rdy=0;tl=0;acc=0;toast='';toastT=0;off=0;popup=null;bait=null;phoneT=0;freezeT=0;fakeT=0;flipT=0;flashT=0;shake=0;lieAt=0}
+function fail(why){
+  if(st!=='live')return;
+  let w=why;
+  if(fakeT>0)w='가짜 실패 화면에 속아서 움직임 ㅋㅋ';else if(freezeT>0)w='"응답 없음"을 못 참고 움직임';else if(popup)w='가짜 경품에 낚임';else if(phoneT>0)w='엄마 전화 받으려다 움직임';
+  cause=w;pct=Math.min(99,Math.floor(100*tl/(LV[lv].dur*60)));fails++;try{localStorage.stillFails=fails}catch(e){}
+  st='failed';t=0;shake=24;beep(120,.5,'sawtooth',.12);beep(90,.6,'sawtooth',.12)
+}
+function spawn(fx){
+  const busy=freezeT>0||fakeT>0||popup||phoneT>0;
+  if(fx==='toast'){toast=pick(TOAST);toastT=170}
+  else if(fx==='lie'){off=Math.round(rnd(-6,18));lieAt=tl}
+  else if(fx==='popup'&&!busy){popup={x:rnd(20,100),y:rnd(110,300),t:260,s:pick(POPUPS)}}
+  else if(fx==='shake')shake=70;
+  else if(fx==='bait'){bait={x:rnd(70,290),y:rnd(150,410),t:220}}
+  else if(fx==='flash'){flashT=16;beep(1600,.3,'sawtooth',.2)}
+  else if(fx==='phone'&&!busy){phoneT=210}
+  else if(fx==='freeze'&&!busy){freezeT=200}
+  else if(fx==='fakefail'&&!busy){fakeT=170;beep(150,.4,'sawtooth',.1)}
+  else if(fx==='flip')flipT=260;
+}
+function clearLevel(){
+  st='clear';clrT=0;beep(880,.15);setTimeout(()=>beep(1320,.25),120);
+  if(lv+1>best){best=lv+1;try{localStorage.stillBest=best}catch(e){}}
+}
+function update(){
+  t++;if(shake>0)shake--;
+  if(st==='ready'){rdy++;if(rdy>=150){st='live';tl=0;acc=0}}
+  else if(st==='live'){
+    tl++;const L=LV[lv],rem=L.dur*60-tl;
+    if(acc>=4)fail('마우스 이동 감지 ('+lastPx.toFixed(1)+'px)');
+    acc*=.96;
+    if(tl%60===0&&tl>=120&&rem>180&&Math.random()<L.p)spawn(pick(L.fx));
+    if(lv>=3&&tl%90===45&&rem>180&&Math.random()<.4)spawn(pick(['toast','shake','flash']));
+    if(lv===4&&rem===600){toast='...라고 생각했지?';toastT=200}
+    if(toastT>0)toastT--;
+    if(popup){popup.t--;if(popup.t<=0)popup=null}
+    if(bait){bait.t--;if(bait.t<=0)bait=null}
+    if(phoneT>0){phoneT--;if(phoneT%30===0){beep(880,.12);setTimeout(()=>beep(1040,.12),140)}}
+    if(freezeT>0)freezeT--;if(fakeT>0){fakeT--;if(fakeT===80){beep(660,.1)}}
+    if(flipT>0)flipT--;if(flashT>0)flashT--;
+    if(rem<=0)clearLevel();
+  }
+  else if(st==='clear'){clrT++;if(clrT>150){if(lv>=4){st='ending';endT=0}else{lv++;startReady()}}}
+  else if(st==='ending')endT++;
+  else if(st==='failed'){}
+}
+function shown(){const L=LV[lv];const real=(L.dur*60-tl)/60;let s=real+off*Math.max(0,1-(tl-lieAt)/300);
+  if(lv===4&&real<10)return .1;return Math.max(.1,s)}
+function draw(){
+  g.save();
+  if(shake>0)g.translate((Math.random()-.5)*shake*.5,(Math.random()-.5)*shake*.5);
+  if(flipT>0&&st==='live'){g.translate(0,H);g.scale(1,-1)}
+  const live=st==='live'||st==='ready';
+  g.fillStyle=lv>=3?'#dfe6f2':lv>=1?'#e9f1e2':'#e8f4ec';g.fillRect(-20,-20,W+40,H+40);
+  if(st==='title'){
+    g.fillStyle='#10161c';g.fillRect(0,0,W,H);
+    emo('🥔',180,80,70);txt('가만히 감자 챌린지',180,150,30,'#ffe14d','#000');txt('움직이지 마!',180,190,24,'#ff6b6b','#000');
+    g.fillStyle='#1f2a35';g.fillRect(24,220,312,190);
+    ['마우스 · 키보드 · 클릭 · 스크롤 · 탭 전환','전부 금지입니다.','숨 쉬는 건 허용 (아직은)','5스테이지 · 총 165초','방해는 점점 심해집니다. 이유는 없습니다.'].forEach((l,i)=>txt(l,180,240+i*30,i===1?17:14,i===1?'#ff9':'#cfe'));
+    txt(best?'최고 기록: STAGE '+best+' 클리어':'기록 없음',180,435,13,'#899');
+    txt('모바일은 화면에서 손만 떼면 됩니다',180,455,11,'#667');
+    if(t%60<40)txt('▶ 클릭하면 시작 (마지막 클릭입니다) ◀',180,472,13,'#7CFC00');
+  }
+  if(live||st==='clear'){
+    const L=LV[lv];
+    const rem=st==='live'?shown():0;
+    const frozen=freezeT>0;
+    if(frozen)frozenShown=frozenShown||rem;else frozenShown=0;
+    const dispRem=frozen?frozenShown:rem;
+    txt('STAGE '+(lv+1)+'/5  '+L.n,180,26,15,'#355');
+    const br=1+(frozen?0:.025*Math.sin(t/38));
+    g.save();g.translate(180,250);g.scale(br,br);emo('🧘',0,0,130);g.restore();
+    if(st==='live'||st==='ready'){
+      txt(st==='live'?fmt(dispRem):L.dur+'.0',180,92,52,st==='live'&&dispRem<3?'#d22':'#244');
+      g.fillStyle='rgba(0,0,0,.15)';g.fillRect(30,128,300,8);g.fillStyle='#3a9';g.fillRect(30,128,300*Math.min(1,st==='live'?Math.max(0,1-dispRem/L.dur):0),8);
+      txt('💀 '+fails,320,26,13,'#a33');
+    }
+    if(st==='ready'){
+      g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,170,W,140);
+      txt(rdy<90?'마우스에서 손을 떼세요':'3 · 2 · 1',180,222,22,'#fff');txt(rdy<90?'(아직은 움직여도 됩니다)':'움직이면 안 돼요...',180,258,14,'#ccc');txt(L.q,180,288,12,'#9ab');
+    }
+    if(bait&&st==='live'){emo('🧀',bait.x,bait.y+Math.sin(t/8)*5,44);txt('여기 봐!',bait.x,bait.y+36,12,'#fff','#000')}
+    if(toastT>0&&st==='live'){g.fillStyle='rgba(30,30,30,.85)';g.fillRect(20,160,320,40);txt(toast,180,180,14,'#fff')}
+    if(phoneT>0){g.fillStyle='rgba(20,20,40,.85)';g.fillRect(40,150,280,170);emo('📞',180+Math.sin(t*.8)*8,215,60);txt('엄마',180,265,22,'#fff');btn([70,282,100,30],'받기','#2a2');btn([190,282,100,30],'거절','#a22')}
+    if(popup){const p=popup;g.fillStyle='#fff';g.fillRect(p.x,p.y,260,110);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(p.x,p.y,260,110);g.fillStyle='#2b5fc0';g.fillRect(p.x,p.y,260,22);txt('알림',p.x+30,p.y+11,12,'#fff');txt('X',p.x+245,p.y+11,13,'#fff');txt(p.s,p.x+130,p.y+55,13,'#222');btn([p.x+80,p.y+76,100,26],'확인','#d33')}
+    if(freezeT>0){g.fillStyle='rgba(120,120,120,.55)';g.fillRect(0,0,W,H);txt('⏳ 응답 없음...',180,200,26,'#fff','#000');txt('프로그램이 응답하지 않습니다',180,240,14,'#eee','#000');btn([110,270,140,36],'강제 종료','#c33')}
+    if(fakeT>80){g.fillStyle='#b00';g.fillRect(0,0,W,H);txt('실패!',180,190,54,'#fff','#000');txt('움직이셨습니다',180,250,24,'#fff','#000');txt('(마우스가 움직였을지도 모릅니다)',180,290,12,'#fcc')}
+    else if(fakeT>0){g.fillStyle='#fff3a0';g.fillRect(0,0,W,H);txt('...라고 생각했지?',180,220,28,'#a33');txt('계속하세요',180,264,16,'#555')}
+    if(flashT>0){g.fillStyle='rgba(255,255,255,'+Math.min(1,flashT/10)+')';g.fillRect(-20,-20,W+40,H+40)}
+    if(st==='clear'){
+      g.fillStyle='rgba(0,0,0,.65)';g.fillRect(0,150,W,170);txt('STAGE '+(lv+1)+' CLEAR',180,200,32,'#7CFC00','#000');txt(lv<4?'다음 스테이지는 더 시끄럽습니다':'...정말로?',180,248,15,'#fff');txt('(아직 움직이면 안 됩니다)',180,278,12,'#9ab')
+    }
+  }
+  if(st==='failed'){
+    g.fillStyle='#240808';g.fillRect(-20,-20,W+40,H+40);
+    txt('움직임 감지!',180,90,36,'#ff5555','#000');txt(cause,180,145,15,'#fff');
+    txt('STAGE '+(lv+1)+' · '+pct+'%에서 실패',180,190,18,'#ffe14d');
+    txt('누적 실패 '+fails+'회',180,222,14,'#bbb');txt(pct>=85?'아깝다 ㅋㅋ':pick2(),180,252,13,'#999');
+    emo('🥔',180,330,70);
+    if(t>40)btn([60,400,240,46],'▶ 다시 가만히 있기','#2e8b2e');
+  }
+  if(st==='ending'){
+    g.fillStyle='#10161c';g.fillRect(-20,-20,W+40,H+40);
+    const mins=Math.max(1,Math.round((165+0)/60*10)/10);
+    const n=Math.min(ENDQ.length,Math.floor(endT/200));
+    for(let i=0;i<n;i++)txt(ENDQ[i].replace('{m}',mins),180,120+i*50,i===3?18:16,i===3?'#ff9':'#dfe');
+    if(n>=ENDQ.length){emo('🥔',180,400,60);txt('실패 '+fails+'회',180,440,12,'#889');if(endT>1100&&t%60<40)txt('▶ 처음으로 ◀',180,466,14,'#7CFC00')}
+  }
+  g.restore();
+}
+function pick2(){return pick(FAILQ)}
+function xy(e){const r=c.getBoundingClientRect();return [(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H]}
+addEventListener('pointermove',e=>{if(st!=='live')return;const d=Math.hypot(e.movementX||0,e.movementY||0);if(!(d>0))return;lastPx=d;acc+=d;if(d>=7)fail('마우스 이동 감지 ('+d.toFixed(0)+'px)')},{passive:true});
+addEventListener('pointerdown',e=>{
+  const [x,y]=xy(e);
+  if(st==='live'){fail('클릭 감지');return}
+  if(st==='title'){lv=0;startReady();return}
+  if(st==='failed'&&t>40&&inR(x,y,[60,400,240,46])){startReady();return}
+  if(st==='ending'&&endT>1100){st='title';lv=0;t=0}
+});
+addEventListener('keydown',e=>{if(st==='live'){e.preventDefault();fail('키보드 입력 감지')}});
+addEventListener('wheel',e=>{if(st==='live')fail('스크롤 감지')},{passive:true});
+addEventListener('contextmenu',e=>{e.preventDefault();if(st==='live')fail('우클릭 감지')});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&st==='live')fail('탭을 떠남 (도망)')});
+addEventListener('blur',()=>{if(st==='live')fail('창 포커스를 잃음 (도망)')});
+let lastT=performance.now(),accT=0;
+(function loop(now){accT+=Math.min(100,now-lastT);lastT=now;while(accT>=1000/60){update();accT-=1000/60}draw();requestAnimationFrame(loop)})(lastT);
+</script>
+</body>
+</html>
