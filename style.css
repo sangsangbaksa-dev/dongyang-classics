@@ -1,0 +1,42 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0d0b09;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#c {
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  background: #1a1612;
+  image-rendering: auto;
+}
+#touch { position: fixed; inset: auto 0 0 0; pointer-events: none; }
+#touch[hidden] { display: none; }
+#touch .pad {
+  position: absolute;
+  bottom: 12px;
+  display: grid;
+  gap: 8px;
+  pointer-events: auto;
+}
+#touch .left { left: 12px; grid-template-columns: repeat(2, 64px); }
+#touch .right { right: 12px; grid-template-columns: repeat(3, 58px); }
+#touch button {
+  height: 58px;
+  border-radius: 50%;
+  border: 2px solid rgba(233, 196, 106, .7);
+  background: rgba(20, 16, 12, .55);
+  color: #f3e6c4;
+  font: 700 20px "Noto Serif KR", serif;
+}
+#touch button.on { background: rgba(233, 196, 106, .6); color: #1a1612; }
