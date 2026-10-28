@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>출근하는 감자 DX</title>
+<style>
+html,body{margin:0;height:100%;background:#222;overflow:hidden;font-family:"Comic Sans MS","Malgun Gothic",sans-serif;touch-action:manipulation}
+#wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
+canvas{background:#87ceeb;max-width:100%;max-height:100%;aspect-ratio:3/4;image-rendering:pixelated;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="360" height="480"></canvas></div>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d'),W=360,H=480;
+const ACC=['감자','고구마(가짜)','감자(진짜)','감자튀김 전 단계'];
+const DEATH=['월급 루팡 실패','대파에 찔렸습니다','출근 지각 (사유: 감자라서)','당신은 이미 으깨졌습니다','퇴사 사유: 대파','감자인데 왜 날아다녀요?'];
+const RANDOM=['감자는 사실 채소입니다','대파: 나는 무기가 아니다','점심 뭐 먹지','월요일입니다','지금 이 게임 하는 시간에 출근하세요','상사: 감자 씨 보고서요','와! 감자!'];
+let st='title',x,y,vy,pipes,score,best=+localStorage.potato||0,t=0,shake=0,flip=false,msg='',msgT=0,deathMsg='',fakeLoad=0,flash=0,rot=0;
+function reset(){x=80;y=220;vy=0;pipes=[];score=0;t=0;flip=false;rot=0}
+function say(s){msg=s;msgT=120}
+let ac;function beep(f,d=.1,type='square'){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.value=.08;o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+function flap(){
+  if(st==='title'){st='load';fakeLoad=0;beep(300);return}
+  if(st==='load'){return}
+  if(st==='dead'){if(t>30){reset();st='play';beep(500)}return}
+  vy=-6.2;beep(600+Math.random()*400,.08);
+  if(Math.random()<.03)say('뿌우웅');
+}
+addEventListener('pointerdown',flap);
+addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();flap()}});
+function die(){
+  st='dead';t=0;shake=20;flash=10;
+  deathMsg=DEATH[Math.random()*DEATH.length|0];
+  if(score>best){best=score;try{localStorage.potato=best}catch(e){}}
+  beep(120,.5,'sawtooth');
+}
+function update(){
+  t++;
+  if(shake>0)shake--;if(flash>0)flash--;if(msgT>0)msgT--;
+  if(st==='load'){fakeLoad+=Math.random()<.3?0.4:.9;if(fakeLoad>=100){reset();st='play'}else if(fakeLoad>69&&fakeLoad<70.5)fakeLoad=69.2+Math.random()*.2*(t%2);return}
+  if(st==='play'){
+    vy+=.38;y+=vy;rot=Math.max(-.6,Math.min(1.2,vy*.1));
+    if(t%95===0){const gy=90+Math.random()*220;pipes.push({x:W+20,gy,gap:130-Math.min(40,score*2),p:false})}
+    for(const p of pipes){p.x-=2.6+Math.min(score*.08,2);
+      if(!p.p&&p.x<x){p.p=true;score++;beep(900,.06);
+        if(score%5===0){const r=Math.random();if(r<.4){flip=!flip;say(flip?'화면이 뒤집혔다 (이유 없음)':'원래대로')}else if(r<.7){shake=30;say('지진 아님. 연출임.')}else say(RANDOM[Math.random()*RANDOM.length|0])}}
+      if(x+16>p.x&&x-16<p.x+46&&(y-16<p.gy-p.gap/2||y+16>p.gy+p.gap/2))die();
+    }
+    pipes=pipes.filter(p=>p.x>-60);
+    if(y>H-30||y<-40)die();
+  }
+}
+function leek(px,y1,y2,up){ // 대파
+  g.fillStyle='#fff';g.fillRect(px,y1,46,y2-y1);
+  g.fillStyle='#3a9d23';
+  const gh=Math.min(y2-y1,up?0:0);
+  g.fillRect(px+4,y1,38,(y2-y1)*.55);
+  g.fillStyle='#2b7a1a';g.fillRect(px+20,y1,6,(y2-y1)*.55);
+  g.fillStyle='#000';g.font='14px sans-serif';g.textAlign='center';
+  g.fillText('대파',px+23,up?y2-8:y1+(y2-y1)*.55+20);
+}
+function draw(){
+  g.save();
+  if(shake>0)g.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  if(flip){g.translate(0,H);g.scale(1,-1)}
+  g.fillStyle=flash>0?'#f00':'#87ceeb';g.fillRect(-20,-20,W+40,H+40);
+  g.font='40px serif';g.textAlign='left';g.fillText('☁️',(60-t*.3%500+500)%500-80,80);g.fillText('☁️',(260-t*.2%500+500)%500-80,160);
+  g.fillStyle='#8b5a2b';g.fillRect(0,H-20,W,20);
+  for(const p of pipes){leek(p.x,0,p.gy-p.gap/2,true);leek(p.x,p.gy+p.gap/2,H-20,false)}
+  g.save();g.translate(x,y);g.rotate(rot);g.font='38px serif';g.textAlign='center';g.textBaseline='middle';g.fillText('🥔',0,0);
+  g.font='14px serif';g.fillText('💼',14,14);g.restore();
+  g.restore();
+  g.textAlign='center';g.fillStyle='#000';g.textBaseline='alphabetic';
+  if(st==='play'||st==='dead'){g.font='bold 42px Comic Sans MS';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=5;g.strokeText(score,W/2,60);g.fillText(score,W/2,60)}
+  if(msgT>0){g.font='bold 16px sans-serif';g.fillStyle='#ff0';g.strokeStyle='#000';g.lineWidth=4;g.strokeText(msg,W/2,110);g.fillText(msg,W/2,110)}
+  g.textBaseline='alphabetic';
+  if(st==='title'){
+    g.fillStyle='rgba(0,0,0,.6)';g.fillRect(20,100,320,250);
+    g.fillStyle='#ffe14d';g.font='bold 34px Comic Sans MS';g.fillText('출근하는 감자',W/2,150);
+    g.fillStyle='#ff6b6b';g.font='bold 26px Comic Sans MS';g.fillText('DX 얼티밋 리마스터',W/2,185);
+    g.fillStyle='#fff';g.font='15px sans-serif';
+    g.fillText('클릭/스페이스로 날아서 출근하세요',W/2,230);
+    g.fillText('대파는 피해야 합니다. 이유는 없습니다.',W/2,255);
+    g.fillText('최고기록: '+best+'  (칭호: '+ACC[Math.min(3,best/10|0)]+')',W/2,295);
+    if(t%60<40){g.fillStyle='#7CFC00';g.font='bold 20px sans-serif';g.fillText('▶ 클릭해서 시작 ◀',W/2,335)}
+  }
+  if(st==='load'){
+    g.fillStyle='rgba(0,0,0,.85)';g.fillRect(0,0,W,H);
+    g.fillStyle='#fff';g.font='18px sans-serif';g.fillText('감자 로딩중... '+Math.floor(fakeLoad)+'%',W/2,220);
+    g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(60,240,240,20);g.fillStyle='#7CFC00';g.fillRect(62,242,236*fakeLoad/100,16);
+    g.fillStyle='#888';g.font='12px sans-serif';g.fillText(fakeLoad>60&&fakeLoad<72?'(69%에서 멈추는 척 하는 중)':'(사실 로딩할 거 없음)',W/2,285);
+  }
+  if(st==='dead'){
+    g.fillStyle='rgba(0,0,0,.7)';g.fillRect(20,150,320,200);
+    g.fillStyle='#ff4d4d';g.font='bold 30px Comic Sans MS';g.fillText('으깨짐',W/2,195);
+    g.fillStyle='#fff';g.font='16px sans-serif';g.fillText(deathMsg,W/2,230);
+    g.fillText('점수 '+score+' / 최고 '+best,W/2,265);
+    g.fillText('칭호: '+ACC[Math.min(3,score/10|0)],W/2,292);
+    if(t>30){g.fillStyle='#7CFC00';g.fillText('클릭해서 다시 으깨지기',W/2,330)}
+  }
+}
+(function loop(){update();draw();requestAnimationFrame(loop)})();
+</script>
+</body>
+</html>
