@@ -8,9 +8,10 @@ const PROMO = {
   contact: '',
 };
 
-const FIGHT_SECONDS = 50;
+const FIGHT_SECONDS = 65;
+const METER_GAIN = 1.5; // 기(氣) 충전 배율 (공격, 피격, 방어 모두)
 const SELECT_SECONDS = 12;
-const RESULT_SECONDS = 15;
+const RESULT_SECONDS = 12;
 
 const cv = document.getElementById('c');
 const g = cv.getContext('2d');
@@ -503,8 +504,10 @@ function startFight(playerChar) {
   const D = DIFFS[G.diff];
   const enemy = mkFighter(enemyChar, 1, aiCtl(D));
   enemy.maxhp = enemy.hp = enemy.hpShow = Math.round(enemyChar.hp * D.hp);
-  enemy.spd = D.speed; enemy.dmgMul = D.dmg; enemy.meterMul = D.meter;
-  G.p = [mkFighter(playerChar, 0, humanCtl), enemy];
+  enemy.spd = D.speed; enemy.dmgMul = D.dmg; enemy.meterMul = D.meter * METER_GAIN;
+  const me = mkFighter(playerChar, 0, humanCtl);
+  me.meterMul = METER_GAIN;
+  G.p = [me, enemy];
   G.stage = enemyChar.stage;
   G.projs = []; G.parts = []; G.cutin = null; G.hitstop = 0; G.shake = 0; G.flash = 0;
   G.phase = 'intro'; G.phaseT = 0; G.timer = FIGHT_SECONDS * 60; G.winner = null; G.timeout = false;
@@ -527,13 +530,21 @@ function finishFight() {
 
 const CARD = { w: 140, h: 190, gap: 12, x0: 30, y: 84 };
 const cardX = i => CARD.x0 + i * (CARD.w + CARD.gap);
+const RULES_BTN = {
+  title: { x: W / 2 - 80, y: 428, w: 160, h: 36 },
+  select: { x: 756, y: 14, w: 104, h: 34 },
+  fight: { x: W / 2 + 44, y: 24, w: 32, h: 32 },
+};
+const clickIn = r => !!(Input.click && Input.click.x >= r.x && Input.click.x <= r.x + r.w && Input.click.y >= r.y && Input.click.y <= r.y + r.h);
 const diffChip = i => ({ x: 290 + i * 92, y: 14, w: 86, h: 34 });
 
 function updateTitle() {
+  if (Input.pressed.KeyR || clickIn(RULES_BTN.title)) { openRules(); return; }
   if (G.sceneT > 20 && (Input.anyPress)) { Sound.play('confirm'); G.sel = 0; G.selT = 0; setScene('select'); }
 }
 
 function updateSelect() {
+  if (Input.pressed.KeyR || clickIn(RULES_BTN.select)) { openRules(); return; }
   G.selT++;
   const n = CHARS.length;
   if (tapped('left')) { G.sel = (G.sel + n - 1) % n; Sound.play('select'); }
@@ -559,6 +570,7 @@ function updateSelect() {
 }
 
 function updateFight() {
+  if (Input.pressed.KeyH || Input.pressed.KeyP || clickIn(RULES_BTN.fight)) { openRules(); return; }
   if (G.flash > 0) G.flash--;
   if (G.shake > 0) G.shake *= 0.85;
   if (G.cutin) {
@@ -595,13 +607,15 @@ function updateResult() {
 
 function update() {
   G.t++; G.sceneT++;
+  const esc = Input.pressed.Escape && G.scene !== 'title' && G.scene !== 'rules';
   switch (G.scene) {
     case 'title': updateTitle(); break;
     case 'select': updateSelect(); break;
     case 'fight': updateFight(); break;
     case 'result': updateResult(); break;
+    case 'rules': updateRules(); break;
   }
-  if (Input.pressed.Escape && G.scene !== 'title') setScene('title');
+  if (esc) setScene('title');
   Input.pressed = {}; Input.anyPress = false; Input.click = null;
 }
 
@@ -640,6 +654,7 @@ function drawTitle() {
   inkText(g, '전국난투', W / 2, 250, 58, '#e9c46a', '#1a0f0a', 8);
   inkText(g, '제자백가 90초 대결', W / 2, 300, 22, '#f3e6c4', '#1a0f0a', 5);
   if (Math.floor(G.t / 30) % 2 === 0) inkText(g, '아무 키나 누르거나 화면을 터치하세요', W / 2, 395, 26, '#fff', '#1a0f0a', 6);
+  ruleButton(RULES_BTN.title, '규칙 보기 (R)');
   inkText(g, PROMO.club, W / 2, 500, 18, '#e9c46a', '#1a0f0a', 4);
 }
 
@@ -656,6 +671,7 @@ function drawSelect() {
     inkText(g, D.name, c.x + c.w / 2, c.y + c.h / 2 + 1, 18, on ? '#1a1008' : '#cbbd9a', on ? 'rgba(255,255,255,.0)' : '#000', 0);
   });
   inkText(g, '난이도 ▲▼ (W/S)', 290, 62, 11, '#9a8e72', '#000', 3, 'left');
+  ruleButton(RULES_BTN.select, '규칙 보기 (R)', 13);
   CHARS.forEach((ch, i) => {
     const x = cardX(i), sel = i === G.sel;
     const grad = g.createLinearGradient(0, CARD.y, 0, CARD.y + CARD.h);
@@ -714,10 +730,14 @@ function drawHud() {
   inkText(g, String(sec), W / 2, 42, 32, sec <= 10 ? '#ff7a6b' : '#f3e6c4', '#000', 0);
   const D = DIFFS[G.diff];
   inkText(g, D.hanja + ' ' + D.name, W / 2, 84, 14, D.color, '#000', 4);
+  const rb = RULES_BTN.fight;
+  g.fillStyle = 'rgba(10,8,6,.8)'; g.beginPath(); g.arc(rb.x + 16, rb.y + 16, 15, 0, 7); g.fill();
+  g.strokeStyle = '#e9c46a'; g.lineWidth = 2; g.stroke();
+  inkText(g, '?', rb.x + 16, rb.y + 17, 20, '#e9c46a', '#000', 0);
   // 조작 안내
   const me = a, show = G.t < 60 * 8 || G.phase === 'intro';
   g.globalAlpha = show ? 0.95 : 0.4;
-  inkText(g, 'A D 이동 · W 점프 · S 방어 · J 약공격 · K 강공격 · L 필살기(기 50) · U 극의(기 100)', W / 2, H - 16, 15, '#f3e6c4', '#000', 4);
+  inkText(g, 'A D 이동 · W 점프 · S 방어 · J 약공격 · K 강공격 · L 필살기(기 50) · U 극의(기 100) · H 규칙', W / 2, H - 16, 15, '#f3e6c4', '#000', 4);
   g.globalAlpha = 1;
   if (me.meter >= 100 && G.phase === 'fight') inkText(g, 'U — 극의 발동!', 30, 128, 20, '#ff9a6b', '#000', 4, 'left');
   else if (me.meter >= 50 && G.phase === 'fight') inkText(g, 'L — 필살기 가능', 30, 128, 18, '#8fd0ff', '#000', 4, 'left');
@@ -825,6 +845,7 @@ function render() {
     case 'select': drawSelect(); break;
     case 'fight': drawFight(); break;
     case 'result': drawResult(); break;
+    case 'rules': drawRules(); break;
   }
   if (Sound.muted) inkText(g, '🔇 M', W - 16, H - 14, 14, '#9a8e72', '#000', 3, 'right');
 }
