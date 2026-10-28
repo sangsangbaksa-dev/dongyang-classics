@@ -14,11 +14,14 @@ canvas{background:#87ceeb;max-width:100%;max-height:100%;aspect-ratio:3/4;image-
 <div id="wrap"><canvas id="c" width="360" height="480"></canvas></div>
 <script>
 const c=document.getElementById('c'),g=c.getContext('2d'),W=360,H=480;
-const ACC=['감자','고구마(가짜)','감자(진짜)','감자튀김 전 단계'];
 const DEATH=['월급 루팡 실패','대파에 찔렸습니다','출근 지각 (사유: 감자라서)','당신은 이미 으깨졌습니다','퇴사 사유: 대파','감자인데 왜 날아다녀요?'];
-const RANDOM=['감자는 사실 채소입니다','대파: 나는 무기가 아니다','점심 뭐 먹지','월요일입니다','지금 이 게임 하는 시간에 출근하세요','상사: 감자 씨 보고서요','와! 감자!'];
-let st='title',x=80,y=220,vy=0,pipes=[],score=0,best=+localStorage.potato||0,t=0,shake=0,flip=false,msg='',msgT=0,deathMsg='',fakeLoad=0,stall=0,flash=0,rot=0;
-function reset(){x=80;y=220;vy=0;pipes=[];score=0;t=0;flip=false;rot=0}
+const RANK=[[0,'인턴 감자'],[5,'신입 감자'],[10,'대리 감자'],[20,'과장 감자'],[30,'부장 감자'],[50,'사장 감자'],[80,'전설의 감자튀김']];
+const rankOf=n=>{let r=RANK[0][1];for(const k of RANK)if(n>=k[0])r=k[1];return r};
+const BOSSQ=['보고서 언제 되나?','주말에 잠깐 나올 수 있지?','우리는 한 가족이야','감자 씨 커피 한잔 하지','이거 어제까지 되나?'];
+const RANDOM=['감자는 사실 채소입니다','대파: 나는 무기가 아니다','점심 뭐 먹지','월요일입니다','지금 이 게임 하는 시간에 출근하세요','상사: 감자 씨 보고서요','와! 감자!','이 게임은 감자가 만들었습니다','쉬는 시간은 없습니다','연차는 감자에게 사치입니다'];
+let st='title',x=80,y=220,vy=0,pipes=[],score=0,best=+localStorage.potato||0,t=0,shake=0,flip=false,msg='',msgT=0,deathMsg='',fakeLoad=0,stall=0,flash=0,rot=0,items=[],bosses=[],coffee=0,ad=0,rain=[],combo=0;
+function reset(){x=80;y=220;vy=0;pipes=[];score=0;t=0;flip=false;rot=0;items=[];bosses=[];coffee=0;ad=0;combo=0}
+for(let i=0;i<14;i++)rain.push({x:Math.random()*W,y:Math.random()*H,v:1+Math.random()*2});
 function say(s){msg=s;msgT=120}
 let ac;function beep(f,d=.1,type='square'){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.value=.08;o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 function flap(){
@@ -30,9 +33,9 @@ function flap(){
 }
 addEventListener('pointerdown',flap);
 addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();flap()}});
-function die(){
+function die(why){
   st='dead';t=0;shake=20;flash=10;
-  deathMsg=DEATH[Math.random()*DEATH.length|0];
+  deathMsg=why||DEATH[Math.random()*DEATH.length|0];
   if(score>best){best=score;try{localStorage.potato=best}catch(e){}}
   beep(120,.5,'sawtooth');
 }
@@ -46,8 +49,20 @@ function update(){
     for(const p of pipes){p.x-=2.6+Math.min(score*.08,2);
       if(!p.p&&p.x<x){p.p=true;score++;beep(900,.06);
         if(score%5===0){const r=Math.random();if(r<.4){flip=!flip;say(flip?'화면이 뒤집혔다 (이유 없음)':'원래대로')}else if(r<.7){shake=30;say('지진 아님. 연출임.')}else say(RANDOM[Math.random()*RANDOM.length|0])}}
-      if(x+16>p.x&&x-16<p.x+46&&(y-16<p.gy-p.gap/2||y+16>p.gy+p.gap/2))die();
+      if(!coffee&&x+16>p.x&&x-16<p.x+46&&(y-16<p.gy-p.gap/2||y+16>p.gy+p.gap/2))die();
     }
+    if(coffee>0)coffee--;
+    if(t%170===60&&Math.random()<.8){const k=Math.random();items.push({x:W+20,y:90+Math.random()*280,k:k<.4?'☕':k<.7?'💰':'🍟',r:false})}
+    if(score>=4&&t%330===200){bosses.push({x:W+30,y:80+Math.random()*280,q:BOSSQ[Math.random()*BOSSQ.length|0]});say('부장님이 나타났다!')}
+    if(score>=7&&!ad&&Math.random()<.002){ad=300}
+    for(const it of items){it.x-=2.6;if(Math.hypot(it.x-x,it.y-y)<26){it.x=-99;
+      if(it.k==='☕'){coffee=240;say('☕ 카페인 충전! 무적!');beep(1200,.15)}
+      else if(it.k==='💰'){score+=3;say('💰 월급 +3 (세금 제외 안 함)');beep(1000,.15)}
+      else{score=Math.max(0,score-3);shake=12;say('🍟 동족상잔... -3');beep(150,.3,'sawtooth')}}}
+    items=items.filter(i=>i.x>-40);
+    for(const b of bosses){b.x-=4;if(Math.hypot(b.x-x,b.y-y)<28&&!coffee){die('부장님: "'+b.q+'"');}}
+    bosses=bosses.filter(b=>b.x>-60);
+    if(ad>0)ad--;
     pipes=pipes.filter(p=>p.x>-60);
     if(y>H-30||y<-40)die();
   }
@@ -68,23 +83,31 @@ function draw(){
   g.fillStyle=flash>0?'#f00':'#87ceeb';g.fillRect(-20,-20,W+40,H+40);
   g.font='40px serif';g.textAlign='left';g.fillText('☁️',(60-t*.3%500+500)%500-80,80);g.fillText('☁️',(260-t*.2%500+500)%500-80,160);
   g.fillStyle='#8b5a2b';g.fillRect(0,H-20,W,20);
+  g.font='16px serif';g.textAlign='center';for(const r of rain){r.y+=r.v;if(r.y>H)r.y=-10;g.globalAlpha=.35;g.fillText('🌿',r.x,r.y);g.globalAlpha=1}
+  g.textAlign='left';
   for(const p of pipes){leek(p.x,0,p.gy-p.gap/2,true);leek(p.x,p.gy+p.gap/2,H-20,false)}
+  g.font='28px serif';g.textAlign='center';g.textBaseline='middle';
+  for(const it of items)g.fillText(it.k,it.x,it.y+Math.sin(t/10)*4);
+  for(const b of bosses){g.font='34px serif';g.fillText('👔',b.x,b.y);g.font='bold 11px sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.strokeText(b.q,b.x-60<0?60:b.x-30,b.y-26);g.fillText(b.q,b.x-60<0?60:b.x-30,b.y-26)}
+  if(coffee>0&&(coffee>60||t%6<3)){g.globalAlpha=.5;g.fillStyle='#ffd24d';g.beginPath();g.arc(x,y,26,0,7);g.fill();g.globalAlpha=1}
   g.save();g.translate(x,y);g.rotate(rot);g.font='38px serif';g.textAlign='center';g.textBaseline='middle';g.fillText('🥔',0,0);
   g.font='14px serif';g.fillText('💼',14,14);g.restore();
   g.restore();
   g.textAlign='center';g.fillStyle='#000';g.textBaseline='alphabetic';
+  if(ad>0&&st==='play'){g.fillStyle='#fff';g.fillRect(40,380,280,60);g.strokeStyle='#f00';g.lineWidth=3;g.strokeRect(40,380,280,60);g.fillStyle='#d00';g.font='bold 14px sans-serif';g.fillText('[광고] 지금 감자칩 50% 할인!!',W/2,405);g.fillStyle='#666';g.font='11px sans-serif';g.fillText('(닫기 버튼 없음 · 3초 뒤 사라짐)',W/2,426);g.fillStyle='#000';g.fillText('X',312,394)}
+  if(st==='play'){g.font='12px sans-serif';g.fillStyle='#000';g.fillText(rankOf(score),W/2,78)}
   if(st==='play'||st==='dead'){g.font='bold 42px Comic Sans MS';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=5;g.strokeText(score,W/2,60);g.fillText(score,W/2,60)}
   if(msgT>0){g.font='bold 16px sans-serif';g.fillStyle='#ff0';g.strokeStyle='#000';g.lineWidth=4;g.strokeText(msg,W/2,110);g.fillText(msg,W/2,110)}
   g.textBaseline='alphabetic';
   if(st==='title'){
-    g.fillStyle='rgba(0,0,0,.6)';g.fillRect(20,100,320,250);
+    g.fillStyle='rgba(0,0,0,.6)';g.fillRect(20,100,320,275);
     g.fillStyle='#ffe14d';g.font='bold 34px Comic Sans MS';g.fillText('출근하는 감자',W/2,150);
     g.fillStyle='#ff6b6b';g.font='bold 26px Comic Sans MS';g.fillText('DX 얼티밋 리마스터',W/2,185);
     g.fillStyle='#fff';g.font='15px sans-serif';
-    g.fillText('클릭/스페이스로 날아서 출근하세요',W/2,230);
-    g.fillText('대파는 피해야 합니다. 이유는 없습니다.',W/2,255);
-    g.fillText('최고기록: '+best+'  (칭호: '+ACC[Math.min(3,best/10|0)]+')',W/2,295);
-    if(t%60<40){g.fillStyle='#7CFC00';g.font='bold 20px sans-serif';g.fillText('▶ 클릭해서 시작 ◀',W/2,335)}
+    g.fillText('클릭/스페이스로 날아서 출근하세요',W/2,225);g.font='13px sans-serif';g.fillText('☕무적  💰월급+3  🍟동족상잔-3',W/2,306);g.fillText('👔부장님 = 즉사',W/2,324);g.font='15px sans-serif';
+    g.fillText('대파는 피해야 합니다. 이유는 없습니다.',W/2,248);
+    g.fillText('최고기록: '+best+'  ('+rankOf(best)+')',W/2,278);
+    if(t%60<40){g.fillStyle='#7CFC00';g.font='bold 20px sans-serif';g.fillText('▶ 클릭해서 시작 ◀',W/2,358)}
   }
   if(st==='load'){
     g.fillStyle='rgba(0,0,0,.85)';g.fillRect(0,0,W,H);
@@ -97,7 +120,7 @@ function draw(){
     g.fillStyle='#ff4d4d';g.font='bold 30px Comic Sans MS';g.fillText('으깨짐',W/2,195);
     g.fillStyle='#fff';g.font='16px sans-serif';g.fillText(deathMsg,W/2,230);
     g.fillText('점수 '+score+' / 최고 '+best,W/2,265);
-    g.fillText('칭호: '+ACC[Math.min(3,score/10|0)],W/2,292);
+    g.fillText('최종 직급: '+rankOf(score),W/2,292);
     if(t>30){g.fillStyle='#7CFC00';g.fillText('클릭해서 다시 으깨지기',W/2,330)}
   }
 }
