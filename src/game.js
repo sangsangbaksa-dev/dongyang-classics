@@ -694,6 +694,7 @@ function drawResult() {
   inkText(g, me.ch.quote, 330, 218, 34, '#f3e6c4', '#000', 6, 'left');
   wrapText(me.ch.quoteKo, 330, 246, 570, 22, '#d8caa4', 16);
   wrapText('당신이 고른 ' + me.ch.school + '(' + me.ch.schoolHanja + ') — ' + me.ch.desc, 330, 274, 570, 20, '#f3e6c4', 14);
+  wrapText((R.win ? '논파한 ' : '맞선 ') + en.ch.school + '의 말: ' + en.ch.quote + ' — ' + en.ch.quoteKo, 330, 292, 570, 20, '#9a8e72', 12);
 
   panel(30, 360, W - 60, 150, 0.78);
   inkText(g, PROMO.club, 56, 392, 32, '#ffd86b', '#000', 6, 'left');
