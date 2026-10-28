@@ -21,16 +21,21 @@ const STAGES=[
  {n:'와이파이 불안정',sub:'📶 입력이 가끔 늦게 도착합니다',bg:'#b9c3cc',gr:'#555',sp:2.8,gap:152,d:130,boss:1,fake:.25,lag:1},
  {n:'대파가 도망간다',sub:'대파는 가만히 있지 않는다',bg:'#f0a060',gr:'#6b3a1a',sp:2.8,gap:154,d:120,boss:1,fake:.3,mv:1},
  {n:'중력 반전',sub:'위가 아래고 아래가 위다 (가끔)',bg:'#c9a3e0',gr:'#4a2a6a',sp:2.9,gap:154,d:120,boss:1,fake:.3,grav:1},
- {n:'수줍은 대파',sub:'대파는 가까이 가면 사라진다',bg:'#1a2240',gr:'#111',sp:3.0,gap:158,d:120,boss:1,fake:.3,ghost:1}
+ {n:'수줍은 대파',sub:'대파는 가까이 가면 흐려진다',bg:'#1a2240',gr:'#111',sp:2.9,gap:168,d:115,boss:1,fake:.25,ghost:1}
 ];
 const BGBOSS={bg:'#ffd84d',gr:'#8a6a00'};
 const DEATH=['월급 루팡 실패','대파에 찔렸습니다','출근 지각 (사유: 감자라서)','당신은 이미 으깨졌습니다','퇴사 사유: 대파','감자인데 왜 날아다녀요?','방금 그거 피할 수 있었음','손이 미끄러졌다고 하세요'];
 const SPECIAL={1:'첫 사망 축하드립니다 🎉',3:'세 번째! 감자가 울고 있어요',5:'다섯 번 으깨진 감자는 감자튀김',10:'10회 돌파 (축하 아님)',20:'혹시 손이 두 개 맞나요?',30:'이 정도면 대파가 불쌍함',50:'그만하고 쉬세요. 감자도 쉽니다',100:'장인 정신'};
 const BOSSQ=['보고서 언제 되나?','주말에 잠깐 나올 수 있지?','우리는 한 가족이야','감자 씨 커피 한잔 하지','이거 어제까지 되나?'];
-const RANDOM=['Tip: 죽지 마세요','Tip: 이 게임에 Tip은 없습니다','감자는 사실 채소입니다','대파: 나는 무기가 아니다','점심 뭐 먹지','월요일입니다','상사: 감자 씨 보고서요','쉬는 시간은 없습니다'];
+const CAMEO=[['🐔','닭: 지나가는 중'],['🛸','UFO: 감자 납치 시도 (실패)'],['🐟','생선: 이유 없음'],['🧑‍🚀','우주인: 길 잃음'],['🦆','오리: 꽥'],['🚽','화장실: 급함'],['🐢','거북이: 이쪽이 더 빠름'],['🗿','모아이: ...'],['🛵','배달 오토바이: 비켜'],['🧓','할머니: 감자 먹었니']];
+const CLEARQ=['스테이지 클리어! 달라진 건 없다','CLEAR! 보상: 없음','잘했어요 (도장 없음)','클리어! 근데 퇴근은 아님','다음 스테이지는 더 어렵습니다 (진짜)'];
+const RANDOM=['배터리 1%','알림: 엄마한테 부재중 전화 37통','감자 신분증 분실 신고 접수됨','방금 누가 방귀 뀜','Windows 업데이트 준비 중 (0%)','이 대사는 광고가 아닙니다','지금 뒤에 부장님 있음 (거짓말)','오늘 점심은 감자탕 (동족)','당근마켓에서 감자 팝니다','Tip: 죽지 마세요','Tip: 이 게임에 Tip은 없습니다','감자는 사실 채소입니다','대파: 나는 무기가 아니다','점심 뭐 먹지','월요일입니다','상사: 감자 씨 보고서요','쉬는 시간은 없습니다'];
 const TAUNT=['대파 대왕: 퇴사는 없다','대파 대왕: 내 연봉은 대파 한 단','대파 대왕: 나는 사실 쪽파다','대파 대왕: 감자 따위가!','대파 대왕: 회의 하나 잡자'];
-const CREDITS=['출근하는 감자 DX','극한 출근','','기획 ........ 감자','프로그래밍 ........ 감자 (야근)','그래픽 ........ 이모지','사운드 ........ 삑삑','QA ........ 부장님','','출연','감자 · 대파 · 부장님','가짜 월급 · 광고 · 쪽파','','제작 지원','대파 대왕의 연봉','69%에서 멈춘 로딩바','당신의 인내심','','이 게임은 허구입니다','실제 감자와 무관합니다','','수고하셨습니다','내일도 출근입니다'];
+const END_LINES=['대파 대왕은 쓰러지며 말했다.','"나는 그저...\n필요한 사람이고 싶었을 뿐이야."','감자는 한참 동안\n아무 말도 하지 못했다.','출근길의 사람들은 어제도, 오늘도\n같은 시간, 같은 자리에 선다.','누구를 위해서인지는\n아무도 묻지 않은 채.','감자는 가방을 내려놓았다.','그리고 처음으로,\n하늘을 올려다보았다.','구름이 흐르고 있었다.','오늘 하루도 수고했다.'];
+const END_NOTES=[220,262,330,262,196,247,294,247];
+const END_LINE=300,END_START=120,END_FIN=END_START+END_LINES.length*END_LINE;
 let st='title',x=80,y=220,vy=0,pipes=[],t=0,shake=0,flip=false,msg='',msgT=0,deathMsg='',fakeLoad=0,stall=0,flash=0,rot=0,items=[],bosses=[],coffee=0,ad=0,rain=[];
+let cameos=[],flipT=0;
 let stage=0,stageT=0,deaths=0,playFr=0,gdir=1,bannerT=0,saved=null,endT=0,bestDeaths=null,deadPct=0,fakeT=0,adT=0,lagQ=[],ph=1;
 let bossHP=BOSS_HP,bt=0,bx=290,by=240,hitF=0,shots=[],bullets=[];
 try{const b=localStorage.potatoBest;bestDeaths=b==null?null:+b;saved=JSON.parse(localStorage.potatoSave2||'null')}catch(e){}
@@ -38,10 +43,10 @@ function saveGame(){try{localStorage.potatoSave2=JSON.stringify({stage,hp:bossHP
 function clearSave(){try{localStorage.removeItem('potatoSave2')}catch(e){}saved=null}
 function say(s){msg=s;msgT=150}
 for(let i=0;i<14;i++)rain.push({x:Math.random()*W,y:Math.random()*H,v:1+Math.random()*2});
-let ac;function beep(f,d=.1,type='square'){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.value=.08;o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+let ac;function beep(f,d=.1,type='square'){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(.08,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 const fmt=f=>{const s=Math.floor(f/60);return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 const pct=()=>stage<5?Math.min(99,Math.floor(100*stageT/STAGE_FR)):Math.min(99,Math.floor(100*(1-(bossHP+(ph===1?BOSS_HP:0))/(BOSS_HP*2))));
-function respawn(){x=80;y=220;vy=0;pipes=[];items=[];bosses=[];shots=[];bullets=[];lagQ=[];coffee=45;gdir=1;flip=false;ad=0;if(stage<5)stageT=0;st='play';bannerT=0}
+function respawn(){cameos=[];flipT=0;x=80;y=220;vy=0;pipes=[];items=[];bosses=[];shots=[];bullets=[];lagQ=[];coffee=45;gdir=1;flip=false;ad=0;if(stage<5)stageT=0;st='play';bannerT=0}
 function startRun(cont){
   if(cont&&saved){stage=saved.stage;bossHP=saved.hp||BOSS_HP;ph=saved.ph||1;deaths=saved.deaths||0;playFr=saved.playFr||0}
   else{stage=0;bossHP=BOSS_HP;ph=1;deaths=0;playFr=0;clearSave()}
@@ -49,7 +54,7 @@ function startRun(cont){
 }
 function beginStage(){respawn();bannerT=stage===5?300:240}
 function nextStage(){
-  stage++;stageT=0;pipes=[];items=[];bosses=[];shots=[];bullets=[];flip=false;gdir=1;ad=0;saveGame();beep(880,.2);beep(1320,.3);
+  stage++;stageT=0;cameos=[];say(CLEARQ[Math.random()*CLEARQ.length|0]);pipes=[];items=[];bosses=[];shots=[];bullets=[];flip=false;gdir=1;ad=0;saveGame();beep(880,.2);beep(1320,.3);
   if(stage===5){st='fake';fakeT=0;bossHP=BOSS_HP;ph=1;bt=0}else bannerT=240;
 }
 function press(px,py){
@@ -60,11 +65,11 @@ function press(px,py){
     if(px>=50&&px<=310&&py>=310&&py<=354){st='adwatch';adT=0;beep(700,.1);return}
     respawn();beep(500);bannerT=stage===5?0:0;return
   }
-  if(st==='ending'){if(endT>1060){stage=0;clearSave();st='title';t=0}return}
-  if(lagNow()){lagQ.push(playFr+14)}else doFlap();
+  if(st==='ending'){if(endT>END_FIN+260){stage=0;clearSave();st='title';t=0}return}
+  if(lagNow()){lagQ.push(playFr+10)}else doFlap();
 }
 function doFlap(){vy=-6.2*gdir;beep(600+Math.random()*400,.08);if(Math.random()<.02)say('뿌우웅')}
-function lagNow(){return stage===1&&stageT%600>=300}
+function lagNow(){return stage===1&&stageT%600>=420}
 c.addEventListener('pointerdown',e=>{const r=c.getBoundingClientRect();press((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H)});
 addEventListener('keydown',e=>{
   if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();press(-1,-1)}
@@ -84,7 +89,7 @@ function spawnPipe(S){
   const gy=Math.max(100,Math.min(H-120,py+(Math.random()*2-1)*S.d));
   const p={x:W+20,gy,gap:S.gap,p:false,m:S.mv&&Math.random()<.7,tg:gy,sh:0,mv:0};
   pipes.push(p);
-  const mkItem=(ix,iy)=>{const coffeeK=Math.random()<.5;items.push({x:ix,y:iy,k:coffeeK?'☕':'💰',fake:!coffeeK&&Math.random()<S.fake})};
+  const mkItem=(ix,iy)=>{const r=Math.random();if(stage>=1&&r<.12){items.push({x:ix,y:iy,k:'🍌',fake:false});return}const coffeeK=r<.55;items.push({x:ix,y:iy,k:coffeeK?'☕':'💰',fake:!coffeeK&&Math.random()<S.fake})};
   if(Math.random()<.35)mkItem(p.x+23,Math.random()<.5?gy-S.gap/2+14:gy+S.gap/2-14);
   else if(Math.random()<.15)mkItem(W+145,100+Math.random()*280);
   if(S.boss&&Math.random()<.07*S.boss){bosses.push({x:W+60,y:90+Math.random()*280,q:BOSSQ[Math.random()*BOSSQ.length|0]});say('부장님이 나타났다!')}
@@ -92,6 +97,7 @@ function spawnPipe(S){
 function takeItems(){
   for(const it of items){if(hit(it,{x,y},26)){it.x=-99;
     if(it.k==='☕'){coffee=180;say('☕ 카페인 충전! 무적! (3초)');beep(1200,.15)}
+    else if(it.k==='🍌'){flipT=300;vy=-4;say('🍌 미끄러짐! 화면이 뒤집힌다 (5초)');beep(400,.3,'triangle')}
     else if(it.fake){if(!coffee)die('가짜 월급: 속았죠?');else say('가짜 월급이었다 (커피 덕에 삼)')}
     else if(stage===5){bossHP=Math.max(0,bossHP-3);say('💰 월급 폭탄! 대왕 -3');hitF=8;beep(1000,.15)}
     else{say('💰 월급 +3 (통장엔 안 들어옴)');beep(1000,.15)}}}
@@ -112,9 +118,9 @@ function bossFight(){
   for(const it of items)it.x-=2.6;items=items.filter(i=>i.x>-40);takeItems();
   if(hitF>0)hitF--;
   if(bossHP<=0){
-    bullets=[];shots=[];items=[];shake=40;flash=14;beep(1500,.5);
-    if(ph===1){st='fake2';fakeT=0}
-    else{st='ending';endT=0;clearSave();try{if(bestDeaths==null||deaths<bestDeaths){bestDeaths=deaths;localStorage.potatoBest=deaths}}catch(e){}}
+    bullets=[];shots=[];items=[];
+    if(ph===1){st='fake2';fakeT=0;shake=40;flash=14;beep(1500,.5)}
+    else{st='ending';endT=0;shake=0;flash=0;clearSave();try{if(bestDeaths==null||deaths<bestDeaths){bestDeaths=deaths;localStorage.potatoBest=deaths}}catch(e){}}
   }
 }
 function gravDir(){const G=[0,540,900,1260,1620];let k=0;for(const s of G)if(stageT>=s)k++;if(G.includes(stageT+60))say('⚠ 1초 뒤 중력이 바뀝니다');return (k-1)%2===0?-1:1}
@@ -130,17 +136,20 @@ function update(){
   if(st==='fake'){fakeT++;if(fakeT===170){shake=40;flash=10;beep(100,.5,'sawtooth')}if(fakeT>=290){x=80;y=220;respawn();bannerT=300;t=0}return}
   if(st==='fake2'){fakeT++;if(fakeT===110){shake=40;flash=10;beep(100,.5,'sawtooth')}if(fakeT>=220){ph=2;bossHP=BOSS_HP;bt=0;saveGame();x=80;y=220;respawn();coffee=90;say('대파 대왕: 2페이즈다!!')}return}
   if(st==='adwatch'){adT++;if(adT===330)beep(150,.4,'sawtooth');if(adT>=470){stage=0;stageT=0;ph=1;bossHP=BOSS_HP;respawn();bannerT=240;t=0}return}
-  if(st==='ending'){endT++;return}
+  if(st==='ending'){endT++;if(endT>=END_START&&endT<END_FIN&&(endT-END_START)%150===0)beep(END_NOTES[((endT-END_START)/150|0)%END_NOTES.length],2.2,'sine');return}
   if(st!=='play')return;
   playFr++;stageT++;
   const S=STAGES[Math.min(stage,4)];
   while(lagQ.length&&lagQ[0]<=playFr){lagQ.shift();doFlap()}
-  if(S.lag&&stageT%600===240)say('📶 와이파이 끊김 5초 전!! (입력 지연)');
+  if(S.lag&&stageT%600===360)say('📶 와이파이 끊김 3초 전!! (입력 지연)');
   if(S.grav&&stage<5){const ng=gravDir();if(ng!==gdir){gdir=ng;vy=0;say(ng<0?'중력 반전! (탭하면 내려감)':'중력 정상화 (일단은)')}}
   if(S.mv&&stageT===60)say('대파가 흔들리면 도망갑니다');
-  if(stage===4&&stageT===60)say('대파가 점점 사라집니다. 외우세요.');
+  if(stage===4&&stageT===60)say('대파가 점점 흐려집니다. 외우세요.');
   vy+=.38*gdir;y+=vy;rot=Math.max(-.6,Math.min(1.2,vy*.1*gdir));
   if(coffee>0)coffee--;
+  if(flipT>0)flipT--;
+  if(playFr%420===200){const m=CAMEO[Math.random()*CAMEO.length|0];cameos.push({e:m[0],q:m[1],x:W+40,y:100+Math.random()*300,v:1.4+Math.random()*2})}
+  for(const m of cameos)m.x-=m.v;cameos=cameos.filter(m=>m.x>-120);
   if(stage<5){
     if(stageT>=STAGE_FR){nextStage();return}
     spawnPipe(S);
@@ -172,14 +181,15 @@ function draw(){
   const S=stage>=5?BGBOSS:STAGES[stage];
   g.save();
   if(shake>0)g.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
-  if(flip){g.translate(0,H);g.scale(1,-1)}
+  if(flip||flipT>0){g.translate(0,H);g.scale(1,-1)}
   g.fillStyle=flash>0?'#f00':S.bg;g.fillRect(-20,-20,W+40,H+40);
   g.font='40px serif';g.textAlign='left';g.fillText('☁️',(60-t*.3%500+500)%500-80,80);g.fillText('☁️',(260-t*.2%500+500)%500-80,160);
   g.fillStyle=S.gr;g.fillRect(0,H-20,W,20);
   g.font='16px serif';g.textAlign='center';for(const r of rain){r.y+=r.v;if(r.y>H)r.y=-10;g.globalAlpha=.35;g.fillText('🌿',r.x,r.y);g.globalAlpha=1}
+  g.textBaseline='middle';g.textAlign='center';for(const m of cameos){g.globalAlpha=.9;g.font='30px serif';g.fillText(m.e,m.x,m.y);g.font='10px sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.strokeText(m.q,m.x,m.y+24);g.fillText(m.q,m.x,m.y+24);g.globalAlpha=1}
   const ghost=stage===4;
   for(const p of pipes){
-    g.globalAlpha=ghost?Math.max(.05,Math.min(1,(p.x-100)/170)):1;
+    g.globalAlpha=ghost?Math.max(.22,Math.min(1,(p.x-60)/170)):1;
     const ox=p.sh>0?Math.sin(p.sh*1.6)*5:0;
     leek(p.x+ox,0,p.gy-p.gap/2,true);leek(p.x+ox,p.gy+p.gap/2,H-20,false);g.globalAlpha=1}
   g.font='28px serif';g.textAlign='center';g.textBaseline='middle';
@@ -261,18 +271,23 @@ function draw(){
     else{outline('광고 로드 실패 😭',W/2,210,24,'#f55');outline('처음부터 다시 시작합니다',W/2,248,18,'#fff');g.fillStyle='#888';g.font='12px sans-serif';g.fillText('(스테이지 1로 이동)',W/2,276)}
   }
   if(st==='ending'){
-    overlay(.88);
-    if(endT<1000){const sy=H+20-endT*1.2;
-      CREDITS.forEach((l,i)=>{const ly=sy+i*30;if(ly<-20||ly>H+20)return;g.font=(i<2?'bold 24px':'16px')+' sans-serif';g.fillStyle=i<2?'#ffe14d':'#fff';g.fillText(l,W/2,ly)})}
-    else{
-      outline('THE END',W/2,140,44,'#ffe14d');
-      g.fillStyle='#fff';g.font='16px sans-serif';
-      g.fillText('출근 완료! 대파 대왕은 쪽파였다.',W/2,190);
-      g.fillText('총 플레이타임  '+fmt(playFr),W/2,235);
-      g.fillText('사망 횟수  💀'+deaths+'회',W/2,262);
-      g.fillStyle='#ffe14d';g.fillText('칭호: '+(deaths<10?'대파 마스터 (거짓말 같은데)':deaths<30?'평범한 감자':deaths<100?'감자 으깨기 전문가':'그냥 감자튀김'),W/2,297);
-      g.fillStyle='#aaa';g.font='13px sans-serif';g.fillText(bestDeaths!=null?'클리어 최소 사망: '+bestDeaths+'회':'',W/2,325);g.fillText('내일도 출근입니다.',W/2,350);
-      if(endT>1060&&t%60<40){g.fillStyle='#7CFC00';g.font='bold 18px sans-serif';g.fillText('▶ 클릭해서 처음으로 ◀',W/2,410)}
+    g.fillStyle='#000';g.fillRect(0,0,W,H);
+    const e=endT-END_START;
+    if(e>=0&&e<END_LINES.length*END_LINE){
+      const li=e/END_LINE|0,lt=e%END_LINE;
+      const a=Math.min(1,lt/70,(END_LINE-lt)/70);
+      if(li>=6){g.globalAlpha=Math.min(.35,(e-6*END_LINE)/600);g.font='54px serif';g.fillText('☁️',(260-e*.05)%420,110);g.fillText('☁️',(60-e*.03+420)%420,190);g.globalAlpha=1}
+      if(li>=5){g.globalAlpha=Math.min(.9,(e-5*END_LINE)/300);g.font='30px serif';g.save();g.translate(W/2,H-70);if(li>=6)g.rotate(-.18);g.fillText('🥔',0,0);g.restore();g.globalAlpha=1}
+      g.globalAlpha=Math.max(0,a);g.fillStyle='#e8e8e8';g.font='19px Georgia,"Noto Serif KR","Batang",serif';
+      END_LINES[li].split('\n').forEach((l,k,arr)=>g.fillText(l,W/2,H/2-8+(k-(arr.length-1)/2)*30));
+      g.globalAlpha=1;
+    }else if(endT>=END_FIN){
+      const a=Math.min(1,(endT-END_FIN)/120);
+      g.globalAlpha=a;g.fillStyle='#e8e8e8';g.font='22px Georgia,"Noto Serif KR","Batang",serif';g.fillText('— 끝 —',W/2,H/2-6);
+      g.fillStyle='#666';g.font='11px sans-serif';g.fillText('출근하는 감자',W/2,H/2+30);
+      g.fillStyle='#444';g.fillText('사망 '+deaths+'회 · '+fmt(playFr),W/2,H-24);
+      if(endT>END_FIN+260&&t%90<60){g.fillStyle='#555';g.fillText('(처음으로)',W/2,H-44)}
+      g.globalAlpha=1;
     }
   }
 }
