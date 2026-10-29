@@ -700,10 +700,10 @@ function drawSelect() {
     g.fillStyle = grad; g.fillRect(x, CARD.y - (sel ? 8 : 0), CARD.w, CARD.h + (sel ? 8 : 0));
     g.strokeStyle = sel ? '#ffd86b' : 'rgba(233,196,106,.35)'; g.lineWidth = sel ? 4 : 2;
     g.strokeRect(x, CARD.y - (sel ? 8 : 0), CARD.w, CARD.h + (sel ? 8 : 0));
-    const f = dummy(ch, x + CARD.w / 2, CARD.y + 135, 1, { anim: G.t + i * 10 });
+    const f = dummy(ch, x + CARD.w / 2, CARD.y + 140, 1, { anim: G.t + i * 10 });
     if (sel && G.t % 120 > 90 && G.t % 120 < 106) { f.state = 'atk'; f.move = getMove(f, 'heavy'); f.t = G.t % 120 - 90; }
     g.save(); g.beginPath(); g.rect(x, CARD.y - 8, CARD.w, CARD.h + 8); g.clip();
-    drawFighter(g, f, 0.85, { noShadow: true });
+    drawFighter(g, f, 0.95, { noShadow: true });
     g.restore();
     inkText(g, ch.hanja, x + CARD.w / 2, CARD.y + 160, 26, sel ? '#ffd86b' : '#f3e6c4', '#000', 4);
     inkText(g, ch.school, x + CARD.w / 2, CARD.y + 182, 14, '#cbbd9a', '#000', 3);
@@ -784,7 +784,10 @@ function drawCutin() {
   g.globalAlpha = 1 - out;
   g.strokeStyle = ch.accent; g.lineWidth = 4; g.stroke();
   const fx = lerp(-200, 170, ease(slide));
-  drawFighter(g, dummy(ch, fx, 380, 1, { state: 'cast', t: 30, anim: G.t, cast: null }), 2.2, { noShadow: true });
+  const mv = getMove({ ch, y: GY }, 'heavy'); // 지상에서 내지르는 자세 (얼굴이 가려지지 않게)
+  g.save(); g.translate(0, 380 - GY);
+  drawFighter(g, dummy(ch, fx, GY, 1, { state: 'atk', move: mv, t: mv.startup + 2, anim: G.t }), 2.2, { noShadow: true, noTrail: true });
+  g.restore();
   inkText(g, ch.ult.name, W * 0.64, 235, 110, '#fff', '#000', 12);
   inkText(g, ch.ult.ko, W * 0.64, 318, 36, ch.accent, '#000', 6);
   inkText(g, ch.quote, W / 2, 440, 28, '#f3e6c4', '#000', 6);
