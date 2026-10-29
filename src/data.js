@@ -13,6 +13,7 @@ const CHARS = [
     desc: '균형 잡힌 군자. 예(禮)로 상대의 공격을 받아쳐 되돌려 준다.',
     special: { name: '克己復禮', ko: '극기복례', desc: '반격 자세. 자세 중 맞으면 피해를 무효화하고 되받아친다.' },
     ult: { name: '仁者無敵', ko: '인자무적', desc: '어진 이의 기운이 퍼져 나가는 거대한 충격파.' },
+    rush: { name: '直諫', ko: '직간', desc: '죽간을 앞세우고 곧은 말처럼 똑바로 밀고 들어간다.' },
     stage: 'academy',
   },
   {
@@ -24,6 +25,7 @@ const CHARS = [
     desc: '가볍고 높이 뛴다. 나비를 날려 보내 멀리서 괴롭히는 견제형.',
     special: { name: '胡蝶之夢', ko: '호접지몽', desc: '상대를 쫓아가는 나비 세 마리를 날린다.' },
     ult: { name: '逍遙遊', ko: '소요유', desc: '나비 떼가 하늘을 뒤덮고 상대를 휘감는다.' },
+    rush: { name: '御風', ko: '어풍', desc: '바람을 타고 미끄러지듯 파고들며 불진으로 쓸어 친다.' },
     stage: 'mist',
   },
   {
@@ -35,6 +37,7 @@ const CHARS = [
     desc: '묵직한 한 방. 상대의 발밑에 형벌의 기둥을 세워 올려친다.',
     special: { name: '信賞必罰', ko: '신상필벌', desc: '상대가 선 자리에 형벌의 기둥이 솟는다.' },
     ult: { name: '法不阿貴', ko: '법불아귀', desc: '연속으로 내리꽂히는 다섯 번의 엄벌.' },
+    rush: { name: '嚴進', ko: '엄진', desc: '검을 겨누고 엄정하게 밀어붙이는 묵직한 찌르기.' },
     stage: 'palace',
   },
   {
@@ -46,6 +49,7 @@ const CHARS = [
     desc: '튼튼한 수비의 달인. 겸애의 방패로 몸을 지키고 상처를 회복한다.',
     special: { name: '兼愛', ko: '겸애', desc: '체력을 회복하고, 다음 한 번의 공격을 막아 주는 방패를 두른다.' },
     ult: { name: '非攻', ko: '비공', desc: '침략을 막아 내는 성벽의 파동. 맞히면 체력도 회복한다.' },
+    rush: { name: '衝車', ko: '충차', desc: '방패를 앞세워 성문을 부수듯 들이받는다.' },
     stage: 'wall',
   },
   {
@@ -57,6 +61,7 @@ const CHARS = [
     desc: '가장 빠른 속공형. 창을 앞세워 순식간에 파고든다.',
     special: { name: '兵貴神速', ko: '병귀신속', desc: '무적 상태로 번개같이 돌진해 베어 낸다.' },
     ult: { name: '出其不意', ko: '출기불의', desc: '순식간에 뒤로 돌아가 여섯 번 연속 벤다.' },
+    rush: { name: '奇襲', ko: '기습', desc: '창을 낮추고 허를 찌르며 달려든다.' },
     stage: 'battlefield',
   },
   {
@@ -68,6 +73,7 @@ const CHARS = [
     desc: '논리의 궤변가. 말이 아닌 말(白馬)을 불러내 정면으로 돌파한다.',
     special: { name: '白馬非馬', ko: '백마비마', desc: '흰 말이 전장을 가로질러 돌진한다.' },
     ult: { name: '離堅白', ko: '이견백', desc: '세 마리 백마가 시차를 두고 연달아 짓밟는다.' },
+    rush: { name: '白駒過隙', ko: '백구과극', desc: '흰 말이 틈새를 지나가듯 빠르게 스치며 벤다.' },
     stage: 'lake',
   },
 ];
@@ -97,5 +103,5 @@ const DIFFS = [
     hp: 1.19, dmg: 1.16, speed: 1.08, meter: 1.38, react: 0.5,  proj: 0.5,  punish: 0.45, anti: 0.58, combo: 0.65, ult: 0.048, cool: 0.6,  think: 0.68 },
 ];
 
-const KEYS_P1 = { left: 'KeyA', right: 'KeyD', up: 'KeyW', block: 'KeyS', light: 'KeyJ', heavy: 'KeyK', special: 'KeyL', ult: 'KeyU' };
-const KEYS_P2 = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', block: 'ArrowDown', light: 'Comma', heavy: 'Period', special: 'Slash', ult: 'Semicolon' };
+const KEYS_P1 = { left: 'KeyA', right: 'KeyD', up: 'KeyW', block: 'KeyS', light: 'KeyJ', heavy: 'KeyK', special: 'KeyL', ult: 'KeyU', dash: 'KeyI' };
+const KEYS_P2 = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', block: 'ArrowDown', light: 'Comma', heavy: 'Period', special: 'Slash', ult: 'Semicolon', dash: 'Quote' };

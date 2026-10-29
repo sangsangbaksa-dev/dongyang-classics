@@ -9,6 +9,8 @@ const PROMO = {
 };
 
 const FIGHT_SECONDS = 65;
+const RUSH_CD = 150;    // 돌진기 쿨타임(프레임, 2.5초)
+const RUSH_SPEED = 15;  // 돌진 속도
 const METER_GAIN = 1.5; // 기(氣) 충전 배율 (공격, 피격, 방어 모두)
 const SELECT_SECONDS = 12;
 const RESULT_SECONDS = 12;
@@ -56,12 +58,12 @@ const held = k => !!(Input.down[KEYS_P1[k]] || Input.down[KEYS_P2[k]] || Input.d
 const tapped = k => !!(Input.pressed[KEYS_P1[k]] || Input.pressed[KEYS_P2[k]] || Input.pressed['T_' + k]);
 const confirmPressed = () => !!(Input.pressed.Enter || Input.pressed.Space || tapped('light') || tapped('heavy') || tapped('special'));
 
-const NEUTRAL = Object.freeze({ l: 0, r: 0, u: 0, block: 0, light: 0, heavy: 0, special: 0, ult: 0 });
+const NEUTRAL = Object.freeze({ l: 0, r: 0, u: 0, block: 0, light: 0, heavy: 0, special: 0, ult: 0, dash: 0 });
 
 function humanCtl() {
   return {
     l: held('left'), r: held('right'), u: held('up'), block: held('block'),
-    light: tapped('light'), heavy: tapped('heavy'), special: tapped('special'), ult: tapped('ult'),
+    light: tapped('light'), heavy: tapped('heavy'), special: tapped('special'), ult: tapped('ult'), dash: tapped('dash'),
   };
 }
 
@@ -91,7 +93,7 @@ function mkFighter(ch, side, ctl) {
     hp: ch.hp, maxhp: ch.hp, hpShow: ch.hp, meter: 0,
     state: 'idle', t: 0, anim: 0, move: null, stun: 0, shield: 0, counter: 0, invuln: 0,
     combo: 0, comboT: 0, maxCombo: 0, dmgDealt: 0, hitDone: false, lunge: false, cast: null,
-    flash: 0, ghosts: [], spd: 1, dmgMul: 1, meterMul: 1, airAtk: false,
+    flash: 0, ghosts: [], spd: 1, dmgMul: 1, meterMul: 1, airAtk: false, dashCd: 0,
   };
 }
 
@@ -102,6 +104,8 @@ const HURT_HW = 26, HURT_H = 104;
 
 function getMove(f, kind) {
   const c = f.ch, air = f.y < GY - 1;
+  // 돌진기: 기 소모 없이 쿨타임만 있는 기본기. 앞으로 달려 한 번 베고, 막히면 큰 빈틈이 생긴다.
+  if (kind === 'rush') return { kind, rush: true, startup: 6, active: 12, rec: 24, dmg: Math.round(c.heavyDmg * 0.8), reach: 74 * c.reach, y: -105, h: 100, kb: 9, stun: 20, hs: 7, gain: 10, launch: -2 };
   if (air) { // 점프 공격: 발밑까지 내려가는 높은 판정, 낙하하며 길게 유지된다
     if (kind === 'light') return { kind, air: true, startup: 3, active: 9, rec: 8, dmg: c.lightDmg + 1, reach: 72 * c.reach, y: -75, h: 135, kb: 4, stun: 15, hs: 4, gain: 7, launch: 0 };
     return { kind, air: true, startup: 7, active: 10, rec: 12, dmg: c.heavyDmg, reach: 86 * c.reach, y: -80, h: 150, kb: 8, stun: 22, hs: 7, gain: 12, launch: 0 };
@@ -116,6 +120,12 @@ function startAttack(f, kind) {
   f.state = 'atk'; f.move = getMove(f, kind); f.t = 0; f.hitDone = false;
   if (f.move.air) f.airAtk = true; // 점프당 한 번
   Sound.play(kind === 'heavy' ? 'heavy' : 'light');
+}
+
+function startRush(f) {
+  f.state = 'atk'; f.move = getMove(f, 'rush'); f.t = 0; f.hitDone = false; f.dashCd = RUSH_CD;
+  floatText(f.ch.rush.name, f.x, f.y - 140, f.ch.accent, 22);
+  Sound.play('heavy');
 }
 
 function spawn(kind, x, y, n, color, spd = 6, size = 4, life = 24) {
@@ -316,6 +326,7 @@ function tickFighter(f, o) {
   f.anim++; f.t++;
   if (f.invuln > 0) f.invuln--;
   if (f.counter > 0) f.counter--;
+  if (f.dashCd > 0) f.dashCd--;
   if (f.comboT > 0 && --f.comboT === 0) f.combo = 0;
   f.hpShow += (f.hp - f.hpShow) * 0.08;
   const ground = f.y >= GY;
@@ -326,13 +337,19 @@ function tickFighter(f, o) {
     if (--f.stun <= 0 && ground) { f.state = 'idle'; f.t = 0; }
   } else if (f.state === 'atk') {
     const m = f.move;
+    if (m.rush) { // 돌진: 활성 구간 동안 달리고, 적중/종료 시 멈춘다
+      if (f.t >= m.startup && f.t < m.startup + m.active && !f.hitDone) {
+        f.vx = f.face * RUSH_SPEED; f.lunge = true;
+        if (f.anim % 2 === 0) dust(f.x - f.face * 18, f.y, 1);
+      } else if (f.lunge) { f.lunge = false; f.vx *= 0.3; }
+    }
     if (!f.hitDone && f.t >= m.startup && f.t < m.startup + m.active && meleeHit(f, o, m)) f.hitDone = true;
-    if (f.hitDone && f.t > m.startup + 1) { // 캔슬
+    if (f.hitDone && f.t > m.startup + 1 && !m.rush) { // 캔슬 (돌진기는 캔슬 불가)
       if (I.heavy && m.kind === 'light') startAttack(f, 'heavy');
       else if (I.special && f.meter >= 50) beginCast(f, 'special');
     }
     // 점프 공격은 착지하면 후딜 없이 바로 풀린다
-    if (f.state === 'atk' && (f.t >= m.startup + m.active + m.rec || (m.air && ground && f.t >= m.startup + m.active))) { f.state = 'idle'; f.t = 0; }
+    if (f.state === 'atk' && (f.t >= m.startup + m.active + m.rec || (m.air && ground && f.t >= m.startup + m.active))) { f.state = 'idle'; f.t = 0; f.lunge = false; }
     if (!ground && (I.l || I.r)) f.vx = (I.r - I.l) * f.ch.speed * f.spd * 0.7;
   } else if (f.state === 'cast') {
     const c = f.cast;
@@ -346,6 +363,7 @@ function tickFighter(f, o) {
     if (ground) f.face = Math.sign(o.x - f.x) || f.face;
     if (I.ult && f.meter >= 100 && ground) requestUlt(f);
     else if (I.special && f.meter >= 50) beginCast(f, 'special');
+    else if (I.dash && ground && f.dashCd <= 0) startRush(f);
     else if (I.heavy && (ground || !f.airAtk)) startAttack(f, 'heavy');
     else if (I.light && (ground || !f.airAtk)) startAttack(f, 'light');
     else if (ground && I.block) { f.state = 'block'; f.vx = 0; }
@@ -424,7 +442,7 @@ function tickParts() {
 function aiCtl(D) {
   const st = { planT: 0, plan: 'wait', blk: 0, cool: 0, dodge: 0, dodgeDir: 0, seen: new WeakSet() };
   return (f, o) => {
-    const I = { l: 0, r: 0, u: 0, block: 0, light: 0, heavy: 0, special: 0, ult: 0 };
+    const I = { l: 0, r: 0, u: 0, block: 0, light: 0, heavy: 0, special: 0, ult: 0, dash: 0 };
     const dx = o.x - f.x, d = Math.abs(dx), dir = Math.sign(dx) || f.face;
     const toward = () => { if (dir > 0) I.r = 1; else I.l = 1; };
     const away = () => { if (dir > 0) I.l = 1; else I.r = 1; };
@@ -441,7 +459,7 @@ function aiCtl(D) {
     if (!act) return I;
 
     // 위협 감지: 상대 공격의 첫 프레임마다 한 번만 막을지 굴린다
-    if (o.state === 'atk' && o.move && o.t <= 2 && d < o.move.reach + 70 && !st.seen.has(o.move)) {
+    if (o.state === 'atk' && o.move && o.t <= 2 && d < (o.move.rush ? 300 : o.move.reach + 70) && !st.seen.has(o.move)) {
       st.seen.add(o.move);
       if (Math.random() < D.react) st.blk = o.move.startup + o.move.active + 3;
     }
@@ -479,7 +497,9 @@ function aiCtl(D) {
       st.planT = Math.round((18 + (Math.random() * 28 | 0)) * D.think);
     }
     switch (st.plan) {
-      case 'approach': toward(); break;
+      case 'approach':
+        if (f.dashCd <= 0 && d > 160 && d < 300 && st.cool === 0 && Math.random() < 0.012 + D.combo * 0.03) { I.dash = 1; coolSet(30); } else toward();
+        break;
       case 'back': away(); break;
       case 'guard': I.block = 1; break;
       case 'jump': if (ground) { I.u = 1; toward(); } st.plan = 'wait'; break;
@@ -695,14 +715,16 @@ function drawSelect() {
   inkText(g, ch.quote, 56, 366, 28, '#f3e6c4', '#000', 5, 'left');
   wrapText(ch.quoteKo, 56, 390, 420, 22, '#d8caa4', 15);
   wrapText(ch.desc, 56, 440, 420, 22, '#f3e6c4', 16);
-  inkText(g, '필살기  ' + ch.special.name, 510, 322, 20, '#ffd86b', '#000', 4, 'left');
-  wrapText(ch.special.ko + ' — ' + ch.special.desc, 510, 340, 390, 20, '#f3e6c4', 14);
-  inkText(g, '극의  ' + ch.ult.name, 510, 398, 20, '#ff9a6b', '#000', 4, 'left');
-  wrapText(ch.ult.ko + ' — ' + ch.ult.desc, 510, 416, 390, 20, '#f3e6c4', 14);
+  inkText(g, '필살기  ' + ch.special.name, 510, 314, 20, '#ffd86b', '#000', 4, 'left');
+  wrapText(ch.special.ko + ' — ' + ch.special.desc, 510, 333, 390, 18, '#f3e6c4', 13);
+  inkText(g, '극의  ' + ch.ult.name, 510, 374, 20, '#ff9a6b', '#000', 4, 'left');
+  wrapText(ch.ult.ko + ' — ' + ch.ult.desc, 510, 391, 390, 18, '#f3e6c4', 13);
+  inkText(g, '돌진기  ' + ch.rush.name + '  (I)', 510, 430, 20, '#9fd0ff', '#000', 4, 'left');
+  wrapText(ch.rush.ko + ' — ' + ch.rush.desc + ' 기 소모 없음, 쿨타임 2.5초.', 510, 451, 390, 18, '#f3e6c4', 13);
   const D = DIFFS[G.diff];
   inkText(g, '난이도 ' + D.hanja + ' ' + D.name, 56, 488, 16, D.color, '#000', 4, 'left');
   wrapText(D.desc, 150, 481, 330, 16, '#cbbd9a', 12);
-  wrapText('◀ ▶ / A D 학파 선택 · J 또는 Enter 결정 · 카드를 한 번 더 누르면 결정', 510, 468, 390, 18, '#9a8e72', 12);
+  inkText(g, '◀ ▶ 학파 선택 · J / Enter 결정', 30, 62, 11, '#9a8e72', '#000', 3, 'left');
 }
 
 function drawHud() {
@@ -722,7 +744,13 @@ function drawHud() {
     g.fillStyle = f.meter >= 100 ? (G.t % 10 < 5 ? '#ff9a6b' : '#ffd86b') : f.meter >= 50 ? '#8fd0ff' : '#4a7fa8';
     g.fillRect(dir > 0 ? mx : mx + mw - fw, my, fw, 8);
     g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(mx + mw / 2 - 1, my - 2, 2, 12);
-    inkText(g, f.ch.hanja + ' ' + f.ch.name, x0, y + 62, 20, '#f3e6c4', '#000', 4, dir > 0 ? 'left' : 'right');
+    // 돌진기 쿨타임
+    const dw = mw * 0.5, dx = dir > 0 ? x0 : x0 - dw, dy = my + 14, rdy = f.dashCd <= 0;
+    g.fillStyle = 'rgba(10,8,6,.75)'; g.fillRect(dx - 2, dy - 2, dw + 4, 9);
+    const dfw = rdy ? dw : dw * (1 - f.dashCd / RUSH_CD);
+    g.fillStyle = rdy ? '#ffd86b' : '#7a6a4a'; g.fillRect(dir > 0 ? dx : dx + dw - dfw, dy, dfw, 5);
+    inkText(g, '突', dir > 0 ? dx + dw + 12 : dx - 12, dy + 3, 12, rdy ? '#ffd86b' : '#7a6a4a', '#000', 3);
+    inkText(g, f.ch.hanja + ' ' + f.ch.name, x0, y + 66, 20, '#f3e6c4', '#000', 4, dir > 0 ? 'left' : 'right');
   });
   // 타이머
   const sec = Math.max(0, Math.ceil(G.timer / 60));
@@ -738,7 +766,7 @@ function drawHud() {
   // 조작 안내
   const me = a, show = G.t < 60 * 8 || G.phase === 'intro';
   g.globalAlpha = show ? 0.95 : 0.4;
-  inkText(g, 'A D 이동 · W 점프 · S 방어 · J 약공격 · K 강공격 · L 필살기(기 50) · U 극의(기 100) · H 규칙', W / 2, H - 16, 15, '#f3e6c4', '#000', 4);
+  inkText(g, 'A D 이동 · W 점프 · S 방어 · J 약 · K 강 · I 돌진 · L 필살(기 50) · U 극의(기 100) · H 규칙', W / 2, H - 16, 15, '#f3e6c4', '#000', 4);
   g.globalAlpha = 1;
   if (me.meter >= 100 && G.phase === 'fight') inkText(g, 'U — 극의 발동!', 30, 128, 20, '#ff9a6b', '#000', 4, 'left');
   else if (me.meter >= 50 && G.phase === 'fight') inkText(g, 'L — 필살기 가능', 30, 128, 18, '#8fd0ff', '#000', 4, 'left');
@@ -855,14 +883,21 @@ function render() {
 
 let last = performance.now(), acc = 0;
 const STEP = 1000 / 60;
+let lastError = '';
 function frame(now) {
-  const dt = Math.min(50, now - last); last = now;
-  acc += dt * (G.scene === 'fight' && G.phase === 'ko' && G.phaseT < 60 ? 0.4 : 1);
-  while (acc >= STEP) { update(); acc -= STEP; }
-  render();
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); // 예외가 나도 루프가 멈추지 않도록 먼저 예약한다
+  try {
+    const dt = Math.min(50, now - last); last = now;
+    acc += dt * (G.scene === 'fight' && G.phase === 'ko' && G.phaseT < 60 ? 0.4 : 1);
+    while (acc >= STEP) { update(); acc -= STEP; }
+    render();
+  } catch (e) {
+    if (String(e) !== lastError) { lastError = String(e); console.error(e); }
+    acc = 0;
+  }
 }
-requestAnimationFrame(frame);
+// rules.js 까지 모두 로드된 뒤에 시작한다 (느린 네트워크에서 함수가 아직 없는 상태로 그리는 것을 방지)
+window.addEventListener('load', () => { last = performance.now(); requestAnimationFrame(frame); });
 
 // 자동 테스트용 훅
 window.__game = { G, startFight, CHARS, setScene, update, aiCtl };

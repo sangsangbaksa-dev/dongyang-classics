@@ -199,6 +199,19 @@ function getPose(f) {
     P.lean = -10; P.armF = 2.5; P.armB = 2.7; P.head = -0.3; P.legA = 12; P.legB = -6;
   } else if (f.state === 'win') {
     P.armF = -1.2 - Math.sin(t * 0.15) * 0.2; P.armB = -1.9; P.bob = Math.sin(t * 0.1) * 2; P.legA = 8; P.legB = -8;
+  } else if (f.state === 'atk' && f.move && f.move.rush) {
+    const m = f.move, end = m.startup + m.active;
+    if (f.t < m.startup) { // 웅크리며 힘을 모은다
+      const p = ease(clamp(f.t / m.startup, 0, 1));
+      P.armF = lerp(1.2, -2.0, p); P.lean = lerp(0, -8, p); P.crouch = lerp(0, 9, p); P.legA = 16; P.legB = -16;
+    } else if (f.t < end) { // 앞으로 내뻗으며 달린다
+      P.armF = 0.05; P.lean = 22; P.crouch = 4; P.legA = 24; P.legB = -24;
+      P.trail = { from: -0.55, to: 0.4, heavy: true };
+    } else { // 후딜
+      const p = clamp((f.t - end) / m.rec, 0, 1);
+      P.armF = lerp(0.05, 1.35, p); P.lean = lerp(14, 0, p); P.legA = 16; P.legB = -12;
+    }
+    P.armB = 1.7;
   } else if (f.state === 'atk' && f.move) {
     const m = f.move, total = m.startup + m.active;
     const heavy = m.kind === 'heavy';
