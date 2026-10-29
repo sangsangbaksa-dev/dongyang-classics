@@ -106,6 +106,20 @@ const GAMES=[
   draw(){txt('[광고]',180,170,22,'#d00');ctr('🍗🦆🍟',180,250,60);txt('지금 안 사면 후회합니다',180,320,16,'#444');txt('(사실 후회 안 함)',180,345,12,'#999');
     if(this.t>this.dur*.42){g.fillStyle='#ccc';g.fillRect(...this.sr);g.strokeStyle='#666';g.lineWidth=1;g.strokeRect(...this.sr);txt('건너뛰기 ▶',this.sr[0]+38,this.sr[1]+13,11,'#333')}},
   down(x,y){if(this.t>this.dur*.42&&inR(x,y,this.sr))this.res=1}}}},
+{id:'wifi',make:s=>{const n=s>=1.5?5:4;const code=[];for(let i=0;i<n;i++)code.push(Math.random()*10|0);
+  const keys=[];for(let d=0;d<10;d++){const col=d===0?1:(d-1)%3,row=d===0?3:((d-1)/3|0);keys.push({d,r:[50+col*90,230+row*52,80,44]})}
+  const showF=Math.floor(110/s);
+  return {title:'와이파이 비번 입력! 숫자를 외워라',dur:Math.floor(420/s),bg:'#e6f0ff',code,keys,p:0,showF,
+  draw(){ctr('📶',180,100,56);const show=this.t<showF;txt(show?code.join(' '):Array(n).fill('?').join(' '),180,170,40,show?'#c20':'#667');txt('입력 '+this.p+'/'+n,180,205,14,'#333');for(const k of keys)btn(k.r,String(k.d),'#36c')},
+  down(x,y){if(this.t<showF)return;for(const k of keys)if(inR(x,y,k.r)){if(k.d===code[this.p]){this.p++;beep(500+this.p*60,.06);if(this.p>=n)this.res=1}else this.res=-1;return}}}}},
+{id:'cctv',make:s=>({title:'CCTV 안 볼 때 과자 훔쳐!',dur:Math.floor(450/s),bg:'#fff4e0',watch:true,flip:Math.floor(50/s),got:0,
+  upd(){if(this.t>=this.flip){this.watch=!this.watch;this.flip=this.t+Math.floor((this.watch?rnd(40,70):rnd(48,80))/s)}},
+  draw(){ctr('📹',180,140,70);ctr(this.watch?'👁️':'😴',180,205,40);txt(this.watch?'지켜보는 중!':'졸고 있음',180,245,16,this.watch?'#d00':'#2a2');ctr('🍫',180,340,90);txt(this.got+'/3',180,420,22,'#333')},
+  down(x,y){if(Math.hypot(x-180,y-340)<60){if(this.watch)this.res=-1;else{this.got++;beep(700+this.got*100,.08);if(this.got>=3)this.res=1}}}})},
+{id:'cart',make:s=>({title:'카트 피해! 클릭하면 레인 변경',dur:Math.floor(300/s),bg:'#ffeaea',timeoutWin:true,lane:0,carts:[],
+  upd(){if(this.t%Math.max(26,Math.floor(55/s))===10)this.carts.push({lane:Math.random()<.5?0:1,y:80});for(const c of this.carts){c.y+=4.2*s;if(Math.abs(c.y-420)<40&&c.lane===this.lane)this.res=-1}this.carts=this.carts.filter(c=>c.y<500)},
+  draw(){g.fillStyle='#ddd';g.fillRect(90,70,80,400);g.fillRect(190,70,80,400);for(const c of this.carts)ctr('🛒',130+c.lane*100,c.y,50);ctr('🦆',130+this.lane*100,420,56)},
+  down(){this.lane=1-this.lane;beep(400,.05)}})},
 {id:'math',make:s=>{const a=pick([500,1000,1500,2000,2500,3000]),b=pick([500,1000,1500,2000,2500]);const sum=a+b;const ch=shuf([sum,sum+500,sum-500]).map((v,i)=>({v,r:[70,230+i*70,220,56]}));
   return {title:'계산해! '+a+'원 + '+b+'원',dur:Math.floor(330/s),bg:'#e8f5ff',ch,sum,
   draw(){ctr('🧮',180,150,70);for(const o of ch)btn(o.r,o.v+'원','#36c')},
@@ -114,7 +128,7 @@ const GAMES=[
 
 // ===== 진행 =====
 function pickList(n){return shuf(GAMES.map((_,i)=>i)).slice(0,n)}
-function startMicro(gi){cur=GAMES[gi].make(spd);cur.t=0;cur.res=0;cur.q=pick(CUST);st='intro';tG=0}
+function startMicro(gi){cur=GAMES[gi].make(spd);cur.t=0;cur.res=0;cur.q=pick(CUST);cur.fakeTitle=Math.random()<.2?GAMES[(gi+1+Math.floor(Math.random()*(GAMES.length-1)))%GAMES.length].make(1).title:null;cur.rev=Math.random()<.15;cur.glitch=Math.random()<.12;st='intro';tG=0}
 function startEndless(){endless=true;boss=false;spd=1;lives=3;idx=0;wins=0;list=[pickList(1)[0]];st='shiftintro';tG=0;beep(660,.2)}
 function startShift(){endless=false;boss=false;spd=SH[shift].spd;lives=3;idx=0;list=pickList(6);st='shiftintro';tG=0;beep(660,.2)}
 function startBoss(){endless=false;boss=true;spd=1.85;lives=2;idx=0;list=pickList(3);st='shiftintro';tG=0;beep(110,.6,'sawtooth')}
@@ -124,6 +138,7 @@ function nextGame(){
   if(idx>=list.length){if(boss){st='ending';endT=0;try{localStorage.duckClear=++saved}catch(e){}}else{shift++;shift>=3?startBoss():startShift()}}
   else startMicro(list[idx])}
 function pdown(x,y){
+  if(st==='gift'&&inR(x,y,[80,300,200,50])){lives=Math.max(1,lives-1);shake=14;flash=6;beep(120,.4,'sawtooth');st='giftres';adT=0;return}
   if(st==='title'){if(Math.hypot(x-336,y-30)<20){toggleMute();return}if(saved&&inR(x,y,[95,418,170,26])){startEndless();return}shift=0;wins=0;startShift();return}
   if(st==='play'&&cur.down)cur.down(x,y);
   if(st==='fired'&&tG>30){
@@ -153,8 +168,13 @@ function update(){
   else if(st==='result'){tG++;if(tG>45){
     if(cur.res<0&&lives<=0){st='fired';tG=0;fired=pick(FIRE);if(endless&&wins>endBest){endBest=wins;try{localStorage.duckEndless=wins}catch(e){}}}
     else if(cur.res>0&&!boss&&Math.random()<.2){st='ad';adT=0}
+    else if(cur.res>0&&!boss&&Math.random()<.14){st='gift';adT=0}
+    else if(cur.res>0&&Math.random()<.07){st='crash';adT=0}
     else nextGame()}}
   else if(st==='ad'){adT++;if(adT>110)nextGame()}
+  else if(st==='gift'){adT++;if(adT>150)nextGame()}
+  else if(st==='giftres'){adT++;if(adT>70)nextGame()}
+  else if(st==='crash'){adT++;if(adT===60)beep(120,.3,'sawtooth');if(adT>200)nextGame()}
   else if(st==='fired')tG++;
   else if(st==='sev'){sevT++;if(sevT>260){st='sevdone';sevT=0}}
   else if(st==='sevdone')sevT++;
@@ -190,15 +210,18 @@ function draw(){
     if(st!=='intro')cur.draw();
     else{ctr('⏳',180,260,80)}
     hud();
-    if(st==='intro'){txt(cur.title,180,110,cur.title.length>12?22:28,'#fff','#000');txt(cur.q,180,160,12,'#223')}
+    if(st==='intro'){const it=cur.fakeTitle||cur.title;txt(it,180,110,it.length>12?22:28,'#fff','#000');txt(cur.q,180,160,12,'#223')}
     else if(st==='play'){txt(cur.title,180,50,cur.title.length>14?15:18,'#222');
-      g.fillStyle='rgba(0,0,0,.3)';g.fillRect(20,466,320,8);g.fillStyle='#e33';g.fillRect(20,466,320*(1-cur.t/cur.dur),8)}
+      g.fillStyle='rgba(0,0,0,.3)';g.fillRect(20,466,320,8);g.fillStyle='#e33';g.fillRect(20,466,320*(cur.rev?cur.t/cur.dur:1-cur.t/cur.dur),8);if(cur.fakeTitle&&cur.t<80)txt('※ 아까 안내는 오류였습니다',180,74,12,'#c22');if(cur.glitch){for(let k=0;k<4;k++){g.fillStyle='rgba(255,'+(Math.random()*255|0)+',255,.25)';g.fillRect(0,Math.random()*H,W,rnd(2,7))}}}
     if(st==='result'){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,170,W,120);txt(cur.res>0?'⭕ 성공!':'❌ 실패',180,215,40,cur.res>0?'#7f7':'#f66','#000');txt(cur.res>0?pick(['꽥!','오!','일은 잘하네','월급은 안 오름','사장님이 못 본 척함','방금 그건 운이었음','손님이 팁 대신 한숨을 줌','CCTV가 박수침']):pick(['꽥...','손이 미끄러졌다고 하세요','사장님 보고 있음','방금 그거 피할 수 있었음','손님이 리뷰 1점 남김','오리라서 어쩔 수 없음','CCTV가 비웃음']),180,262,16,'#fff','#000')}
   }
   if(st==='ad'){
     g.fillStyle='#fff';g.fillRect(0,0,W,H);txt('[광고]',180,100,22,'#d00');ctr('🍗🦆',180,220,76);txt('오리고기 1+1',180,300,28,'#d00');txt('(동족 아님. 아마도)',180,335,14,'#666');
     const bx=60+Math.abs(Math.sin(adT*.37))*240,by=30+Math.abs(Math.cos(adT*.23))*60;txt('X',bx,by,18,'#555');txt('광고는 '+Math.ceil((110-adT)/60)+'초 뒤 끝납니다',180,430,12,'#888')
   }
+  if(st==='gift'){g.fillStyle='#fff8d6';g.fillRect(0,0,W,H);txt('🎁 보너스 당첨!',180,150,30,'#d80','#000');ctr('❤️',180,230,70);txt('목숨 +1',180,290,26,'#c22');btn([80,300,200,50],'받기','#2a8');txt('(안 받아도 됩니다)',180,372,11,'#888')}
+  if(st==='giftres'){g.fillStyle='#300';g.fillRect(0,0,W,H);txt('버그 발생!',180,200,36,'#f55','#000');txt('목숨이 반대로 적용됨 (-1)',180,250,17,'#fff');txt('(최소 1개는 남겨드림)',180,282,12,'#aaa')}
+  if(st==='crash'){g.fillStyle='#008080';g.fillRect(0,0,W,H);g.fillStyle='#c0c0c0';g.fillRect(40,150,280,160);g.strokeStyle='#000';g.lineWidth=2;g.strokeRect(40,150,280,160);g.fillStyle='#000080';g.fillRect(40,150,280,22);txt('꽥꽥편의점.exe',110,161,12,'#fff');if(adT<60){txt('작동 중지',180,215,18,'#000');txt('응답 없음...',180,245,14,'#800')}else if(adT<140){txt('문제를 해결하는 중...',180,215,14,'#000');g.fillStyle='#fff';g.fillRect(70,240,220,16);g.fillStyle='#0a0';g.fillRect(72,242,216*Math.min(.99,(adT-60)/80),12)}else txt('복구됨 (진행도 그대로)',180,225,15,'#080')}
   if(st==='fired'){
     g.fillStyle='#200';g.fillRect(0,0,W,H);txt('해고!',180,110,50,'#f33','#000');txt(fired,180,170,18,'#fff');txt(endless?'무한 야근 '+wins+'게임 생존 (최고 '+endBest+')':'(이유는 중요하지 않음)',180,200,12,endless?'#ffe14d':'#999');ctr('🦆',180,240,40);
     btn([50,270,260,46],endless?'▶ 다시 무한 야근':boss?'▶ 사장님께 다시 빌기':'▶ 이번 근무 다시 출근','#2e8b2e');btn([50,330,260,46],'💰 퇴직금 받기','#b8860b');

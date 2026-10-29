@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="description" content="버그가 의도된 방치형 감자 클리커">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐛%3C/text%3E%3C/svg%3E">
+<title>감자 농장 (버그 있음)</title>
+<style>
+html,body{margin:0;height:100%;background:#14201a;overflow:hidden;font-family:"Comic Sans MS","Malgun Gothic",sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+#wrap{height:100%;display:flex;align-items:center;justify-content:center}
+canvas{background:#dff5d8;max-width:100%;max-height:100%;aspect-ratio:3/4;cursor:pointer;touch-action:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="360" height="480"></canvas></div>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d'),W=360,H=480;
+let GOAL=20000; // 목표: 대파 대왕 인수합병 (밸런스는 시뮬레이션으로 조정)
+const UP=[
+ {e:'👆',n:'손가락 강화',base:15,gr:1.55,cps:0},
+ {e:'👵',n:'할머니',base:60,gr:1.17,cps:1},
+ {e:'🚜',n:'트랙터',base:400,gr:1.17,cps:8},
+ {e:'🏭',n:'감자 공장',base:1500,gr:1.17,cps:50},
+ {e:'🛸',n:'UFO 농장',base:6000,gr:1.17,cps:300},
+ {e:'🕳️',n:'블랙홀',base:25000,gr:1.17,cps:2000}
+];
+const PATCH=['패치 1.0.2: 버그 3개 추가','패치노트: 버그는 기능입니다','핫픽스: 핫픽스를 고침','점검 예정: 지금','버전 0.0.1 (정식 출시)','QA: 퇴근했습니다','이슈 #404: 이슈를 찾을 수 없음','개발자: 내 컴퓨터에선 됨'];
+const FLOAT=['버그','NaN','undefined','null','404','???','0x00'];
+let earned=0;
+let st='title',t=0,P=0,owned=[0,0,0,0,0,0],order=[0,1,2,3,4,5,6,7],time=0,clicks=0,bugsCaught=0,bugsMissed=0,stolen=0;
+let toastS='',toastT=0,nanT=0,negT=0,glitchT=0,ovfT=0,ovfDone=false,bsodDone=false,bsodT=0,adT=0,adCd=0,adBad=0,bugHalf=0,pulse=0,dlg=null,endT=0,shake=0;
+let bugs=[],floats=[],best=0,eventsOn=true,lastBuy='';
+try{best=+localStorage.farmBest||0}catch(e){}
+let muted=false;try{muted=localStorage.byeongmatMute==='1'}catch(e){}
+function toggleMute(){muted=!muted;try{localStorage.byeongmatMute=muted?'1':'0'}catch(e){}if(!muted)beep(700,.1)}
+function muteIcon(){g.save();g.font='22px serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.fillText(muted?'🔇':'🔊',336,30);g.restore()}
+let ac;function beep(f,d=.1,type='square',v0=.06){if(muted)return;try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(v0,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.random()*a.length|0],shuf=a=>a.map(v=>[Math.random(),v]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
+const inR=(x,y,r)=>x>=r[0]&&x<=r[0]+r[2]&&y>=r[1]&&y<=r[1]+r[3];
+function fmt(n){n=Math.floor(n);const a=Math.abs(n);let s;if(a>=100000000)s=(a/100000000).toFixed(1)+'억';else if(a>=10000000)s=(a/10000).toFixed(0)+'만';else s=a.toLocaleString('en-US');return (n<0?'-':'')+s}
+function glt(s){if(glitchT<=0)return s;return s.split('').map(ch=>Math.random()<.18&&ch!==' '?pick(['▒','░','#','?','@']):ch).join('')}
+function txt(s,x,y,size,col,out){g.font='bold '+size+'px "Comic Sans MS","Malgun Gothic",sans-serif';g.textAlign='center';g.textBaseline='middle';if(out){g.strokeStyle=out;g.lineWidth=4;g.lineJoin='round';g.strokeText(s,x,y)}g.fillStyle=col;g.fillText(s,x,y)}
+function emo(s,x,y,size){g.font=size+'px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s,x,y)}
+function toast(s){toastS=s;toastT=190}
+const perClick=()=>1+owned[0];
+const cost=i=>Math.ceil(UP[i].base*Math.pow(UP[i].gr,owned[i]));
+const mult=()=>(adBad>0?.5:1)*(bugHalf>0?.5:1);
+function cps(){let s=0;for(let i=1;i<6;i++)s+=owned[i]*UP[i].cps;return s*mult()}
+const slot=i=>[8+(i%2)*174,262+((i/2)|0)*50,170,46];
+
+function startGame(){P=0;earned=0;owned=[0,0,0,0,0,0];order=[0,1,2,3,4,5,6,7];time=0;clicks=0;bugsCaught=0;bugsMissed=0;stolen=0;nanT=negT=glitchT=ovfT=0;ovfDone=bsodDone=false;adCd=adBad=bugHalf=0;bugs=[];floats=[];dlg=null;toastT=0;st='play';t=0;beep(660,.15)}
+function spawnBug(){bugs.push({x:rnd(40,320),y:rnd(130,250),vx:rnd(-1.4,1.4),vy:rnd(-1,1),age:0})}
+function floatTxt(s,x,y,col){floats.push({s,x,y,t:50,col:col||'#fff'})}
+function clickPotato(){
+  clicks++;pulse=7;const r=Math.random();let n=perClick(),lbl='+'+fmt(n);
+  if(r<.1){n*=2;lbl='x2 (버그)'}else if(r<.2){n=0;lbl='씹힘'}
+  P+=n;earned+=n;floatTxt(lbl,180+rnd(-40,40),120,n?'#2a7':'#c33');beep(420+Math.random()*120,.04)
+}
+function buy(i){
+  if(i===7){if(adCd>0){toast('광고 재충전 중 ('+Math.ceil(adCd/60)+'초)');return}st='ad';adT=0;return}
+  if(i===6){
+    const cs=Math.max(100,Math.floor(P*.08));if(P<cs){toast('미스터리 박스: '+fmt(cs)+' 필요');return}
+    P-=cs;const r=Math.random();
+    if(r<.4){P+=cs*2.2;earned+=cs*1.2;toast('🎁 대박! '+fmt(cs*2.2)+' 획득');beep(1200,.2)}
+    else if(r<.7){toast('🎁 꽝! 상자가 비었다 (원래 그렇다)');beep(200,.2)}
+    else if(r<.9){P-=P*.1;toast('🎁 부장님이 들어있었다 -10%');beep(150,.3,'sawtooth')}
+    else{for(let k=0;k<3;k++)spawnBug();toast('🎁 벌레 상자였다!');beep(300,.2,'sawtooth')}
+    return;
+  }
+  const cs=cost(i);if(P<cs){toast(UP[i].n+': '+fmt(cs)+' 필요');return}
+  P-=cs;owned[i]++;beep(880,.08);lastBuy=UP[i].n;
+  if(Math.random()<.06){negT=90;toast('버그: 잔액이 음수로 보임 (착시)')}
+}
+function press(x,y){
+  if(st==='title'){if(Math.hypot(x-336,y-30)<20){toggleMute();return}startGame();return}
+  if(st==='ending'){if(endT>600){st='title';t=0}return}
+  if(st!=='play')return;
+  if(dlg){
+    if(inR(x,y,[40,300,130,40])){P*=.9;toast('국세청: 납부 확인 (-10%)');dlg=null}
+    else if(inR(x,y,[190,300,130,40])){if(Math.random()<.3){toast('국세청: ...면제? (버그)');beep(1100,.2)}else{P*=.75;toast('국세청: 가산세 부과 (-25%)');beep(150,.3,'sawtooth')}dlg=null}
+    return;
+  }
+  for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];if(Math.hypot(b.x-x,b.y-y)<26){bugs.splice(i,1);const bonus=Math.max(10,P*.04);P+=bonus;earned+=bonus;bugsCaught++;toast('🐛 버그 잡음 +'+fmt(bonus)+' (사실 기능이었음)');beep(1000,.12);return}}
+  if(y>=262&&y<=462){
+    if(Math.random()<.08){order=shuf(order);toast('버그: 버튼이 방금 바뀜');beep(300,.1)}
+    for(let s=0;s<8;s++)if(inR(x,y,slot(s))){buy(order[s]);return}
+    return}
+  if(Math.hypot(x-180,y-170)<80)clickPotato();
+}
+function update(){
+  t++;if(shake>0)shake--;if(toastT>0)toastT--;if(pulse>0)pulse--;
+  if(nanT>0)nanT--;if(negT>0)negT--;if(glitchT>0)glitchT--;if(ovfT>0)ovfT--;
+  for(const f of floats){f.y-=.7;f.t--}floats=floats.filter(f=>f.t>0);
+  if(st==='ad'){adT++;if(adT>=300){adBad=1800;adCd=3600;st='play';toast('수입 2배 적용! (오타: 0.5배)');beep(300,.4,'sawtooth')}return}
+  if(st==='bsod'){bsodT++;if(bsodT>=420){P*=.9;st='play';toast('복구 완료 (감자 10% 손실)')}return}
+  if(st==='ending'){endT++;return}
+  if(st!=='play')return;
+  time++;if(adCd>0)adCd--;if(adBad>0)adBad--;if(bugHalf>0)bugHalf--;
+  if(!dlg){const inc=cps()/60;P+=inc;earned+=inc}
+  for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.x+=b.vx;b.y+=b.vy;if(b.x<20||b.x>340)b.vx*=-1;if(b.y<110||b.y>250)b.vy*=-1;b.age++;
+    if(b.age>360){bugs.splice(i,1);bugsMissed++;bugHalf=600;toast('버그 방치: 수입 반토막 (10초)');beep(140,.3,'sawtooth')}}
+  if(dlg){dlg.t--;if(dlg.t<=0){P*=.8;toast('국세청: 무응답 가산세 (-20%)');dlg=null}}
+  if(eventsOn&&time%60===0){
+    const f=earned/GOAL,r=Math.random;
+    if(r()<.08&&bugs.length<3)spawnBug();
+    if(r()<.035)nanT=120;if(r()<.03)negT=120;if(r()<.03){order=shuf(order);toast('상점 리뉴얼 (의도됨)')}
+    if(r()<.025)glitchT=90;if(r()<.025)toast(pick(PATCH));
+    if(f>.2&&r()<.012){P*=.96;toast('서버 롤백: 5초 전으로 (-4%)');beep(180,.3,'sawtooth')}
+    if(f>.28&&r()<.014&&!dlg)dlg={t:420};
+    if(f>.5&&!bsodDone){bsodDone=true;st='bsod';bsodT=0;beep(100,.6,'sawtooth')}
+    if(owned[1]>0&&r()<.04){const k=rnd(.01,.03);const lost=P*k;P-=lost;stolen+=lost;toast('👵 할머니가 감자를 몰래 먹었다')}
+  }
+  if(!ovfDone&&earned>=9999){ovfDone=true;ovfT=300;toast('감자 9999 초과: 오버플로우! (패치 1.0.1 예정)');beep(90,.5,'sawtooth')}
+  if(earned>=GOAL){st='ending';endT=0;beep(1500,.5);try{if(!best||time<best){best=time;localStorage.farmBest=time}localStorage.farmClear=(+localStorage.farmClear||0)+1}catch(e){}}
+}
+function disp(){if(nanT>0)return 'NaN';if(ovfT>0)return '-32,768';if(negT>0)return '-'+fmt(P);return fmt(P)}
+function draw(){
+  g.save();if(shake>0)g.translate((Math.random()-.5)*8,(Math.random()-.5)*8);
+  g.fillStyle='#dff5d8';g.fillRect(-10,-10,W+20,H+20);
+  if(st==='title'){
+    g.fillStyle='#14201a';g.fillRect(0,0,W,H);
+    emo('🥔',180,90,80);emo('🐛',250,60,40);emo('🐛',105,120,28);
+    txt('감자 농장',180,170,36,'#ffe14d','#000');txt('(버그 있음)',180,210,24,'#ff6b6b','#000');
+    g.fillStyle='#22352b';g.fillRect(24,240,312,150);
+    ['감자를 눌러서 키우는 방치형 게임','버그는 전부 의도된 기능입니다','🐛 버그를 잡으면 보상, 놔두면 손해','버튼은 가끔 바뀝니다. 이유는 없습니다','목표: 대파 대왕에게 인수합병 당하기'].forEach((l,i)=>txt(l,180,262+i*28,14,i===1?'#ff9':'#cfe'));
+    txt(best?'최단 인수합병: '+Math.floor(best/3600)+'분 '+(Math.floor(best/60)%60)+'초':'기록 없음',180,412,13,'#899');
+    if(t%60<40)txt('▶ 클릭해서 농사 시작 ◀',180,450,20,'#7CFC00');muteIcon();
+  }
+  if(st==='play'||st==='ad'||st==='bsod'){
+    // 헤더
+    g.fillStyle='#2e6b3a';g.fillRect(0,0,W,64);
+    txt('🥔 '+glt(disp()),180,26,28,'#fff','#000');txt('초당 '+(cps()>=100?Math.floor(cps()):cps().toFixed(1))+'개 · 클릭 +'+perClick()+(mult()<1?'  (수입 감소중)':''),180,52,12,mult()<1?'#fc8':'#cfe');
+    // 감자
+    const sc=1+(pulse>0?.12:0)+.02*Math.sin(t/20);g.save();g.translate(180,170);g.scale(sc,sc);emo('🥔',0,0,130);g.restore();
+    for(const b of bugs){emo('🐛',b.x,b.y,34);if(b.age>240){g.globalAlpha=.7;txt('!',b.x+16,b.y-16,16,'#e22');g.globalAlpha=1}}
+    for(const f of floats){g.globalAlpha=Math.min(1,f.t/25);txt(f.s,f.x,f.y,15,f.col,'#000');g.globalAlpha=1}
+    if(toastT>0){g.fillStyle='rgba(20,20,20,.85)';g.fillRect(14,76,332,28);txt(glt(toastS),180,90,12,'#fff')}
+    // 상점
+    g.fillStyle='#c9e8c2';g.fillRect(0,256,W,224);
+    for(let s=0;s<8;s++){
+      const i=order[s],r=slot(s);let e,n,cs,sub,ok;
+      if(i<6){e=UP[i].e;n=UP[i].n;cs=cost(i);ok=P>=cs;sub=fmt(cs)+' · '+owned[i]+'개'}
+      else if(i===6){e='🎁';n='미스터리 박스';cs=Math.max(100,Math.floor(P*.08));ok=P>=cs;sub=fmt(cs)+' (도박)'}
+      else{e='📺';n='광고 보고 수입 2배!';ok=adCd<=0;sub=adCd>0?Math.ceil(adCd/60)+'초 뒤':'무료'}
+      g.fillStyle=ok?'#fff':'#9bb09a';g.fillRect(r[0],r[1],r[2],r[3]);g.strokeStyle='#000';g.lineWidth=2;g.strokeRect(r[0],r[1],r[2],r[3]);
+      emo(e,r[0]+22,r[1]+23,24);g.textAlign='left';txt(glt(n),r[0]+88,r[1]+16,12,'#222');txt(sub,r[0]+88,r[1]+33,11,ok?'#2a6a2a':'#667');
+    }
+    g.fillStyle='rgba(0,0,0,.35)';g.fillRect(8,464,344,13);g.fillStyle='#e8a';g.fillRect(8,464,344*Math.min(1,earned/GOAL),13);txt('대파 대왕 인수합병까지 '+Math.floor(Math.min(100,earned/GOAL*100))+'%',180,471,9,'#fff','#000');
+    if(dlg){g.fillStyle='rgba(0,0,0,.6)';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.fillRect(30,170,300,190);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(30,170,300,190);g.fillStyle='#2b5fc0';g.fillRect(30,170,300,26);txt('국세청',70,183,13,'#fff');
+      txt('🏛️ 감자세 납부 안내',180,225,17,'#222');txt('미납 시 가산세가 부과됩니다 ('+Math.ceil(dlg.t/60)+'초)',180,255,12,'#a22');txt('(무응답: -20%)',180,278,11,'#777');
+      g.fillStyle='#2a8';g.fillRect(40,300,130,40);g.fillStyle='#c52';g.fillRect(190,300,130,40);txt('납부 (-10%)',105,320,14,'#fff');txt('버티기 (도박)',255,320,14,'#fff')}
+    if(glitchT>0){for(let k=0;k<5;k++){g.fillStyle='rgba('+(Math.random()*255|0)+','+(Math.random()*255|0)+',255,.25)';g.fillRect(0,Math.random()*H,W,rnd(2,8))}}
+    muteIcon();
+  }
+  if(st==='ad'){g.fillStyle='#fff';g.fillRect(0,0,W,H);txt('[광고]',180,110,22,'#d00');emo('🥔📈',180,220,70);txt('수입이 2배가 됩니다!!',180,300,22,'#d00');txt('(건너뛰기 불가 · '+Math.ceil((300-adT)/60)+'초)',180,345,13,'#888');txt('※ 2배는 가끔 0.5배일 수 있습니다',180,420,10,'#bbb')}
+  if(st==='bsod'){
+    g.fillStyle='#0b3d91';g.fillRect(0,0,W,H);
+    if(bsodT<200){txt(':(',60,110,70,'#fff');txt('병맛OS에 문제가 발생했습니다',180,190,16,'#fff');txt('POTATO_NOT_FOUND',180,230,16,'#fff');txt('0x00000000 감자',180,258,13,'#bcd');txt('오류 수집 중... '+Math.min(100,Math.floor(bsodT/2))+'%',180,330,14,'#fff')}
+    else if(bsodT<340){txt('복구 중...',180,210,24,'#fff');g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(60,240,240,20);g.fillStyle='#7CFC00';g.fillRect(62,242,236*Math.min(.99,(bsodT-200)/60),16);txt(Math.floor(Math.min(99,(bsodT-200)/60*100))+'%',180,290,16,'#fff');txt('(99%에서 멈추는 척 하는 중)',180,320,11,'#9bd')}
+    else txt('복구 완료 (감자 10% 손실)',180,230,18,'#fff');
+  }
+  if(st==='ending'){
+    g.fillStyle='#14201a';g.fillRect(-10,-10,W+20,H+20);
+    const L=['🎉 목표 달성!','감자 농장이 대파 대왕에게','인수합병되었습니다.','인수가: 감자 1개 (미지급)'];
+    L.forEach((l,i)=>{if(endT>i*50)txt(l,180,90+i*34,i===0?28:17,i===0?'#ffe14d':'#dfe','#000')});
+    if(endT>220){const rows=['플레이 시간  '+(time/60/60|0)+'분 '+(Math.floor(time/60)%60)+'초','클릭 횟수  '+clicks+'번','잡은 버그  '+bugsCaught+'마리','방치한 버그  '+bugsMissed+'마리','할머니가 먹은 감자  '+fmt(stolen)+'개'];rows.forEach((l,i)=>txt(l,180,260+i*28,14,'#cfe'))}
+    if(endT>420)txt('버그는 끝까지 고쳐지지 않았습니다.',180,420,13,'#ff9');
+    if(endT>600&&t%60<40)txt('▶ 처음으로 ◀',180,456,16,'#7CFC00');
+  }
+  g.restore();
+}
+function xy(e){const r=c.getBoundingClientRect();return [(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H]}
+c.addEventListener('pointerdown',e=>{e.preventDefault();press(...xy(e))});
+addEventListener('keydown',e=>{if(e.code==='KeyM')toggleMute()});
+let lastT=performance.now(),acc=0;
+(function loop(now){acc+=Math.min(100,now-lastT);lastT=now;while(acc>=1000/60){update();acc-=1000/60}draw();requestAnimationFrame(loop)})(lastT);
+</script>
+</body>
+</html>

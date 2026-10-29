@@ -51,7 +51,19 @@ function muteIcon(){g.save();g.font='22px serif';g.textAlign='center';g.textBase
 let ac;function beep(f,d=.1,type='square'){if(muted)return;try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(.08,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 const fmt=f=>{const s=Math.floor(f/60);return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 const pct=()=>stage<5?Math.min(99,Math.floor(100*stageT/STAGE_FR)):Math.min(99,Math.floor(100*(1-(bossHP+(ph===1?BOSS_HP:0))/(BOSS_HP*2))));
-function respawn(){cameos=[];flipT=0;x=80;y=220;vy=0;pipes=[];items=[];bosses=[];shots=[];bullets=[];lagQ=[];coffee=45;gdir=1;flip=false;ad=0;if(stage<5)stageT=0;st='play';bannerT=0}
+let tpWarn=0,floatT=0,nanT=0,cloneT=0,pauseT=0,bugCD=700;
+const pick=a=>a[Math.random()*a.length|0];
+function glitchReset(){tpWarn=floatT=nanT=cloneT=pauseT=0;bugCD=700}
+function pickBug(){
+  const k=pick(stage===2?['ghost','nan','clone','pause']:['tp','ghost','invis','float','nan','clone','pause']);
+  if(k==='tp'){tpWarn=60;say('⚠ 버그 발생! 위치 오류 (의도됨)')}
+  else if(k==='ghost'||k==='invis'){const p=pipes.find(q=>q.x>x+90);if(p){p.bug=k;say(k==='ghost'?'버그: 대파가 반투명해졌다 (통과될까?)':'버그: 대파가 사라졌다?')}}
+  else if(k==='float'){floatT=90;say('버그: 중력이 약해졌다 (달 모드)')}
+  else if(k==='nan'){nanT=160;say('버그: 진행률 NaN')}
+  else if(k==='clone'){cloneT=220;say('버그: 감자가 복제되었다 (진짜는 💼 든 쪽)')}
+  else if(k==='pause'){pauseT=90;say('⏸ 일시정지됨 (버그: 계속 진행 중)')}
+}
+function respawn(){glitchReset();cameos=[];flipT=0;x=80;y=220;vy=0;pipes=[];items=[];bosses=[];shots=[];bullets=[];lagQ=[];coffee=45;gdir=1;flip=false;ad=0;if(stage<5)stageT=0;st='play';bannerT=0}
 function startRun(cont){
   if(cont&&saved){stage=saved.stage;bossHP=saved.hp||BOSS_HP;ph=saved.ph||1;deaths=saved.deaths||0;playFr=saved.playFr||0}
   else{stage=0;bossHP=BOSS_HP;ph=1;deaths=0;playFr=0;clearSave()}
@@ -95,7 +107,7 @@ function spawnPipe(S){
   const gy=Math.max(100,Math.min(H-120,py+(Math.random()*2-1)*S.d));
   const p={x:W+20,gy,gap:S.gap,p:false,m:S.mv&&Math.random()<.7,tg:gy,sh:0,mv:0};
   pipes.push(p);
-  const mkItem=(ix,iy)=>{const r=Math.random();if(stage>=1&&r<.12){items.push({x:ix,y:iy,k:'🍌',fake:false});return}const coffeeK=r<.55;items.push({x:ix,y:iy,k:coffeeK?'☕':'💰',fake:!coffeeK&&Math.random()<S.fake})};
+  const mkItem=(ix,iy)=>{const r=Math.random();if(stage>=1&&r<.12){items.push({x:ix,y:iy,k:'🍌',fake:false});return}if(stage>=1&&r<.2){items.push({x:ix,y:iy,k:'🎁',fake:false});return}const coffeeK=r<.55;items.push({x:ix,y:iy,k:coffeeK?'☕':'💰',fake:!coffeeK&&Math.random()<S.fake})};
   if(Math.random()<.35)mkItem(p.x+23,Math.random()<.5?gy-S.gap/2+14:gy+S.gap/2-14);
   else if(Math.random()<.15)mkItem(W+145,100+Math.random()*280);
   if(S.boss&&Math.random()<.07*S.boss){bosses.push({x:W+60,y:90+Math.random()*280,q:BOSSQ[Math.random()*BOSSQ.length|0]});say('부장님이 나타났다!')}
@@ -104,6 +116,7 @@ function takeItems(){
   for(const it of items){if(hit(it,{x,y},26)){it.x=-99;
     if(it.k==='☕'){coffee=180;say('☕ 카페인 충전! 무적! (3초)');beep(1200,.15)}
     else if(it.k==='🍌'){flipT=300;vy=-4;say('🍌 미끄러짐! 화면이 뒤집힌다 (5초)');beep(400,.3,'triangle')}
+    else if(it.k==='🎁'){if(Math.random()<.5){coffee=180;say('🎁 커피였다! 무적 (운 좋음)');beep(1200,.15)}else{bosses.push({x:W+30,y:y-45,q:pick(BOSSQ)},{x:W+30,y:y+45,q:pick(BOSSQ)});say('🎁 함정이다! 부장님 2명 난입');beep(150,.3,'sawtooth')}}
     else if(it.fake){if(!coffee)die('가짜 월급: 속았죠?');else say('가짜 월급이었다 (커피 덕에 삼)')}
     else if(stage===5){bossHP=Math.max(0,bossHP-3);say('💰 월급 폭탄! 대왕 -3');hitF=8;beep(1000,.15)}
     else{say('💰 월급 +3 (통장엔 안 들어옴)');beep(1000,.15)}}}
@@ -151,8 +164,11 @@ function update(){
   if(S.grav&&stage<5){const ng=gravDir();if(ng!==gdir){gdir=ng;vy=0;say(ng<0?'중력 반전! (탭하면 내려감)':'중력 정상화 (일단은)')}}
   if(S.mv&&stageT===60)say('대파가 흔들리면 도망갑니다');
   if(stage===4&&stageT===60)say('대파가 점점 흐려집니다. 외우세요.');
-  vy+=.38*gdir;y+=vy;rot=Math.max(-.6,Math.min(1.2,vy*.1*gdir));
+  vy+=.38*gdir*(floatT>0?.6:1);y+=vy;rot=Math.max(-.6,Math.min(1.2,vy*.1*gdir));
   if(coffee>0)coffee--;
+  if(stage>=1&&stage<5){if(--bugCD<=0){bugCD=Math.floor(800+Math.random()*500);pickBug()}}
+  if(tpWarn>0&&--tpWarn===0){y=Math.max(70,Math.min(H-70,y+(Math.random()<.5?-1:1)*45));vy=0}
+  if(floatT>0)floatT--;if(nanT>0)nanT--;if(cloneT>0)cloneT--;if(pauseT>0)pauseT--;
   if(flipT>0)flipT--;
   if(playFr%420===200){const m=CAMEO[Math.random()*CAMEO.length|0];cameos.push({e:m[0],q:m[1],x:W+40,y:100+Math.random()*300,v:1.4+Math.random()*2})}
   for(const m of cameos)m.x-=m.v;cameos=cameos.filter(m=>m.x>-120);
@@ -163,7 +179,7 @@ function update(){
       if(p.m&&!p.mv&&p.x-x<150){p.mv=1;p.sh=22;p.tg=Math.max(100,Math.min(H-120,p.gy+(Math.random()<.5?-1:1)*(60+Math.random()*25)))}
       if(p.sh>0){p.sh--;}else if(p.mv){p.gy+=(p.tg-p.gy)*.25}
       if(!p.p&&p.x<x){p.p=true;beep(900,.06)}
-      if(!coffee&&x+18>p.x&&x-18<p.x+46&&(y-18<p.gy-p.gap/2||y+18>p.gy+p.gap/2))die()}
+      if(!coffee&&p.bug!=='ghost'&&x+18>p.x&&x-18<p.x+46&&(y-18<p.gy-p.gap/2||y+18>p.gy+p.gap/2))die()}
     pipes=pipes.filter(p=>p.x>-60);
     for(const it of items)it.x-=S.sp;items=items.filter(i=>i.x>-40);takeItems();
     for(const b of bosses){b.x-=4;if(!coffee&&hit(b,{x,y},28))die('부장님: "'+b.q+'"')}
@@ -195,7 +211,7 @@ function draw(){
   g.textBaseline='middle';g.textAlign='center';for(const m of cameos){g.globalAlpha=.9;g.font='30px serif';g.fillText(m.e,m.x,m.y);g.font='10px sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.strokeText(m.q,m.x,m.y+24);g.fillText(m.q,m.x,m.y+24);g.globalAlpha=1}
   const ghost=stage===4;
   for(const p of pipes){
-    g.globalAlpha=ghost?Math.max(.22,Math.min(1,(p.x-60)/170)):1;
+    g.globalAlpha=p.bug==='ghost'?.3:p.bug==='invis'?.08:(ghost?Math.max(.22,Math.min(1,(p.x-60)/170)):1);
     const ox=p.sh>0?Math.sin(p.sh*1.6)*5:0;
     leek(p.x+ox,0,p.gy-p.gap/2,true);leek(p.x+ox,p.gy+p.gap/2,H-20,false);g.globalAlpha=1}
   g.font='28px serif';g.textAlign='center';g.textBaseline='middle';
@@ -207,13 +223,15 @@ function draw(){
     g.font='18px serif';for(const s of shots)g.fillText('💼',s.x,s.y);
   }
   if(coffee>0&&(coffee>60||t%6<3)){g.globalAlpha=.5;g.fillStyle='#ffd24d';g.beginPath();g.arc(x,y,26,0,7);g.fill();g.globalAlpha=1}
+  if(cloneT>0){g.globalAlpha=.85;g.font='38px serif';g.textAlign='center';g.textBaseline='middle';for(let i=0;i<3;i++)g.fillText('🥔',x+18*(i+1),240+Math.sin(t/11+i*2.1)*110);g.globalAlpha=1}
+  if(tpWarn>0&&t%8<4)g.globalAlpha=.25;
   g.save();g.translate(x,y);g.rotate(rot+(gdir<0?Math.PI:0));g.font='38px serif';g.textAlign='center';g.textBaseline='middle';g.fillText('🥔',0,0);
-  g.font='14px serif';g.fillText('💼',14,14);g.restore();
+  g.font='14px serif';g.fillText('💼',14,14);g.restore();g.globalAlpha=1;
   if(gdir<0&&st==='play'){g.fillStyle='rgba(150,0,200,.15)';g.fillRect(-20,-20,W+40,H+40)}
   g.restore();
   g.textAlign='center';g.textBaseline='alphabetic';
   if(st==='play'||st==='dead'){
-    outline(pct()+'%',W/2,54,34,'#fff');
+    outline((nanT>0?'NaN':pct())+'%',W/2,54,34,'#fff');
     outline(fmt(playFr),W/2,70,11,'#fff');
     g.textAlign='right';g.font='bold 14px sans-serif';g.strokeStyle='#000';g.lineWidth=3;g.strokeText('💀'+deaths,W-8,20);g.fillStyle='#fff';g.fillText('💀'+deaths,W-8,20);g.textAlign='center';
     if(stage<5){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,0,W,5);g.fillStyle='#7CFC00';g.fillRect(0,0,W*stageT/STAGE_FR,5);g.textAlign='left';g.font='bold 11px sans-serif';g.strokeStyle='#000';g.lineWidth=3;g.strokeText('STAGE '+(stage+1)+'/5 '+STAGES[stage].n,6,19);g.fillStyle='#fff';g.fillText('STAGE '+(stage+1)+'/5 '+STAGES[stage].n,6,19);g.textAlign='center'}
@@ -222,6 +240,7 @@ function draw(){
   }
   if(ad>0&&st==='play'){g.fillStyle='#fff';g.fillRect(40,380,280,60);g.strokeStyle='#f00';g.lineWidth=3;g.strokeRect(40,380,280,60);g.fillStyle='#d00';g.font='bold 14px sans-serif';g.fillText('[광고] 지금 감자칩 50% 할인!!',W/2,405);g.fillStyle='#666';g.font='11px sans-serif';g.fillText('(닫기 버튼 없음 · 5초 뒤 사라짐)',W/2,426);g.fillStyle='#000';g.fillText('X',312,394)}
   if(msgT>0&&st==='play')outline(msg,W/2,112,14,'#ff0');
+  if(pauseT>0&&st==='play'){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,200,W,70);outline('⏸ 일시정지',W/2,235,30,'#fff')}
   if(bannerT>0&&st==='play'){
     g.globalAlpha=Math.min(1,bannerT/40);g.fillStyle='rgba(0,0,0,.65)';g.fillRect(0,170,W,110);
     outline(stage===5?'FINAL BOSS':'STAGE '+(stage+1),W/2,212,30,'#ffe14d');
@@ -236,7 +255,7 @@ function draw(){
     g.fillText('대파는 피해야 합니다. 이유는 없습니다.',W/2,209);
     g.font='13px sans-serif';g.fillStyle='#cfe';
     g.fillText('5 스테이지 + 최종 보스 · 무사고 약 4분',W/2,240);
-    g.fillText('(무사고인 사람은 아직 보고된 바 없음)',W/2,259);
+    g.fillText('(무사고 불가 · 버그는 의도된 기능)',W/2,259);
     g.fillStyle='#ff9';g.fillText('⚠ 이 게임은 당신을 화나게 할 수 있습니다 ⚠',W/2,288);
     g.fillStyle='#fff';g.fillText('☕무적  💰월급?  👔부장님=즉사',W/2,314);
     g.fillText(bestDeaths==null?'클리어 기록 없음':'클리어 최소 사망: '+bestDeaths+'회',W/2,336);
