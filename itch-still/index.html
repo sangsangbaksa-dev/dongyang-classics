@@ -31,7 +31,23 @@ const FAILQ=['감자는 원래 가만히 있는데','손이 먼저 나갔죠?','
 const ENDQ=['당신은 총 {m}분 동안 가만히 있었습니다.','이 기록은 아무에게도 알려지지 않습니다.','이제 움직이셔도 됩니다.','...라고 하면 안 움직일 줄 알았죠?','수고하셨습니다.'];
 let hell=false;try{hell=localStorage.stillHell==='1'}catch(e){}
 let st='title',t=0,lv=0,tl=0,acc=0,fails=0,total=0,best=0,cause='',lastPx=0,pct=0;
-let sensorT=0,negT=0;
+let sensorT=0,negT=0,swapT=0,swapK='',swapN=0,snap=0,swapPlan=[];
+const SWAP={
+ potato:{len:330,cause:'감자 게임에 낚여서 조작함 → 가만히 게임으로 소환됨',back:'...무사히 돌아왔다 (감자는 죽었음)'},
+ duck:{len:300,cause:'편의점 알바 게임에 낚임 → 소환됨',back:'...알바는 안 해도 됐다 (바코드는 못 찍음)'},
+ clear:{len:240,cause:'가짜 GAME CLEAR 에 속아서 움직임',back:'...클리어 아님. 계속하세요'},
+ pause:{len:240,cause:'가짜 일시정지 메뉴에 낚임',back:'...일시정지 아니었음. 계속하세요'},
+ anykey:{len:300,cause:'"아무 키나 누르세요"를 진짜로 누름',back:'...아무 키도 누르지 않아서 다행이다'},
+ survey:{len:270,cause:'만족도 별점 설문에 낚임',back:'...설문 보상은 없습니다'},
+ shutdown:{len:240,cause:'종료 카운트다운에 쫄아서 움직임',back:'...종료는 거짓말이었다'}
+};
+const SWAPKEYS=Object.keys(SWAP);
+function planSwaps(){
+  const fr=lv===5?[.15,.3,.45,.6,.75]:lv===4?[.2,.45,.7]:lv===3?[.25,.5,.75]:lv===2?[.3,.65]:lv===1?[.45]:[];
+  const ks=SWAPKEYS.filter(k=>k!=='potato').map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(a=>a[1]);
+  swapPlan=fr.map((f,i)=>({f,k:(i===0&&lv<=2)?'potato':(i===1&&lv>=3)?'potato':ks[i%ks.length]}));
+  if(lv>=3&&!swapPlan.some(p=>p.k==='potato'))swapPlan[0].k='potato';
+}
 let toast='',toastT=0,off=0,popup=null,bait=null,phoneT=0,freezeT=0,fakeT=0,flipT=0,flashT=0,shake=0,clrT=0,rdy=0,endT=0,last=null,frozenShown=0,lieAt=0;
 try{best=+localStorage.stillBest||0;fails=+localStorage.stillFails||0}catch(e){}
 let muted=false;try{muted=localStorage.byeongmatMute==='1'}catch(e){}
@@ -44,15 +60,17 @@ function txt(s,x,y,size,col,out){g.font='bold '+size+'px "Comic Sans MS","Malgun
 function emo(s,x,y,size){g.font=size+'px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s,x,y)}
 function btn(r,label,col){g.fillStyle=col;g.fillRect(r[0],r[1],r[2],r[3]);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(r[0],r[1],r[2],r[3]);txt(label,r[0]+r[2]/2,r[1]+r[3]/2,17,'#fff')}
 const fmt=s=>Math.max(0,s).toFixed(1);
-function startReady(){sensorT=0;negT=0;st='ready';rdy=0;tl=0;acc=0;toast='';toastT=0;off=0;popup=null;bait=null;phoneT=0;freezeT=0;fakeT=0;flipT=0;flashT=0;shake=0;lieAt=0}
+function startReady(){sensorT=0;negT=0;swapT=0;swapK='';swapN=0;snap=0;planSwaps();st='ready';rdy=0;tl=0;acc=0;toast='';toastT=0;off=0;popup=null;bait=null;phoneT=0;freezeT=0;fakeT=0;flipT=0;flashT=0;shake=0;lieAt=0}
 function fail(why){
   if(st!=='live')return;
   let w=why;
+  if(swapT>0){w=SWAP[swapK].cause}else
   if(fakeT>0)w='가짜 실패 화면에 속아서 움직임 ㅋㅋ';else if(freezeT>0)w='"응답 없음"을 못 참고 움직임';else if(popup)w='가짜 경품에 낚임';else if(phoneT>0)w='엄마 전화 받으려다 움직임';
-  cause=w;pct=Math.min(99,Math.floor(100*tl/(LV[lv].dur*60)));fails++;try{localStorage.stillFails=fails}catch(e){}
+  snap=swapT>0?55:0;swapT=0;cause=w;pct=Math.min(99,Math.floor(100*tl/(LV[lv].dur*60)));fails++;try{localStorage.stillFails=fails}catch(e){}
   st='failed';t=0;shake=24;beep(120,.5,'sawtooth',.12);beep(90,.6,'sawtooth',.12)
 }
 function spawn(fx){
+  if(swapT>0)return;
   const busy=freezeT>0||fakeT>0||popup||phoneT>0;
   if(fx==='toast'){toast=pick(TOAST);toastT=170}
   else if(fx==='lie'){off=Math.round(rnd(-6,18));lieAt=tl}
@@ -71,13 +89,56 @@ function clearLevel(){
   st='clear';clrT=0;beep(880,.15);setTimeout(()=>beep(1320,.25),120);
   if(lv<5&&lv+1>best){best=lv+1;try{localStorage.stillBest=best}catch(e){}}
 }
+function startSwap(k){swapK=k;swapT=SWAP[k].len;popup=null;bait=null;phoneT=0;freezeT=0;fakeT=0;flipT=0;flashT=0;sensorT=0;negT=0;toastT=0;beep(880,.12);setTimeout(()=>beep(1320,.15),110)}
+function drawSwap(){
+  const k=SWAP[swapK].len-swapT,B=Math.floor(k/30)%2===0;
+  g.textBaseline='middle';
+  if(swapK==='potato'){
+    g.fillStyle='#87ceeb';g.fillRect(0,0,W,H);g.font='40px serif';g.textAlign='left';g.fillText('☁️',(60-k*.7%500+500)%500-80,80);g.fillText('☁️',(260-k*.5%500+500)%500-80,160);
+    g.fillStyle='#8b5a2b';g.fillRect(0,H-20,W,20);
+    const px=420-k*2.6;for(const o of [px,px+250]){g.fillStyle='#fff';g.fillRect(o,0,46,190);g.fillRect(o,330,46,H-350);g.fillStyle='#3a9d23';g.fillRect(o+4,0,38,105);g.fillRect(o+4,380,38,H-400);txt('대파',o+23,175,13,'#000')}
+    const py=k<110?210+Math.sin(k/9)*18:210+(k-110)*(k-110)*.012;
+    g.font='38px serif';g.textAlign='center';g.fillText('🥔',80,Math.min(py,H-40));g.font='14px serif';g.fillText('💼',94,Math.min(py,H-40)+14);
+    txt('0',W/2,60,40,'#fff','#000');
+    if(k<135){if(B)txt('탭해서 날기!',W/2,110,18,'#ff0','#000')}
+    else{g.fillStyle='rgba(0,0,0,.6)';g.fillRect(0,150,W,200);txt('GAME OVER',W/2,200,36,'#f55','#000');txt('SCORE 0',W/2,245,18,'#fff');g.fillStyle=B?'#2e8b2e':'#1f6b1f';g.fillRect(90,280,180,46);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(90,280,180,46);txt('▶ 다시 하기',180,303,18,'#fff')}
+  }else if(swapK==='duck'){
+    g.fillStyle='#cfe8ff';g.fillRect(0,0,W,H);txt('바코드 찍어!',W/2,50,24,'#222');txt('1교대 · ❤️❤️❤️ · 1/6',W/2,16,12,'#333');
+    g.font='96px serif';g.textAlign='center';g.fillText('📦',180,250);g.fillStyle='#fff';g.fillRect(128,226,104,52);g.fillStyle='#000';for(let i=0;i<14;i++)g.fillRect(134+i*7,231,i%3?3:5,42);
+    const ty=250+Math.sin(k*.09)*130;g.fillStyle='rgba(255,0,0,.85)';g.fillRect(30,ty-2,300,4);
+    g.fillStyle='rgba(0,0,0,.3)';g.fillRect(20,466,320,8);g.fillStyle='#e33';g.fillRect(20,466,320*Math.max(0,1-k/200),8);
+    if(k>=200){g.fillStyle='rgba(0,0,0,.45)';g.fillRect(0,170,W,120);txt('❌ 실패',W/2,215,40,'#f66','#000');txt('꽥...',W/2,262,16,'#fff','#000')}
+  }else if(swapK==='clear'){
+    g.fillStyle='#fff3a0';g.fillRect(0,0,W,H);txt('🎉 STAGE CLEAR 🎉',W/2,170,28,'#e0457b','#fff');txt('이제 움직여도 됩니다!',W/2,225,20,'#333');
+    g.fillStyle=B?'#2e8b2e':'#1f6b1f';g.fillRect(80,290,200,50);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(80,290,200,50);txt('다음 스테이지 ▶',180,315,18,'#fff');txt('(진짜 클리어임. 믿으세요.)',W/2,380,12,'#888')
+  }else if(swapK==='pause'){
+    g.fillStyle='#111';g.fillRect(0,0,W,H);g.font='120px serif';g.textAlign='center';g.globalAlpha=.25;g.fillText('🧘',180,250);g.globalAlpha=1;
+    txt('⏸ 일시정지',W/2,150,30,'#fff');g.fillStyle='#2a6';g.fillRect(90,210,180,46);g.fillStyle='#a33';g.fillRect(90,270,180,46);g.fillStyle='#555';g.fillRect(90,330,180,46);txt('계속하기',180,233,17,'#fff');txt('처음부터',180,293,17,'#fff');txt('설정',180,353,17,'#fff');txt('(게임은 멈추지 않았습니다)',W/2,420,11,'#666')
+  }else if(swapK==='anykey'){
+    g.fillStyle='#000';g.fillRect(0,0,W,H);txt('LOADING  100%',W/2,190,22,'#7CFC00');g.strokeStyle='#7CFC00';g.lineWidth=2;g.strokeRect(60,215,240,18);g.fillStyle='#7CFC00';g.fillRect(62,217,236,14);
+    if(B)txt('시작하려면 아무 키나 누르세요',W/2,300,17,'#fff');txt('PRESS ANY KEY',W/2,335,13,'#888')
+  }else if(swapK==='survey'){
+    g.fillStyle='#eef3ff';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.fillRect(30,130,300,230);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(30,130,300,230);txt('만족도 조사',W/2,165,22,'#222');txt('이 게임은 만족스러우셨나요?',W/2,205,14,'#444');
+    g.font='34px serif';g.textAlign='center';for(let i=0;i<5;i++)g.fillText('⭐',62+i*59,262);txt('별점을 눌러주세요 (보상: 100만원)',W/2,320,12,'#c33')
+  }else if(swapK==='shutdown'){
+    g.fillStyle='#200';g.fillRect(0,0,W,H);txt('⚠ 경고 ⚠',W/2,130,28,'#f55');txt('이 게임은 곧 종료됩니다',W/2,185,18,'#fff');txt(String(Math.max(1,Math.ceil((SWAP.shutdown.len-k-60)/60))),W/2,265,70,'#ff0');
+    g.fillStyle='#a33';g.fillRect(100,330,160,46);g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(100,330,160,46);txt('종료 취소',180,353,17,'#fff')
+  }
+  g.textBaseline='alphabetic';
+}
 function update(){
-  t++;if(shake>0)shake--;
+  t++;if(shake>0)shake--;if(snap>0)snap--;
   if(st==='ready'){rdy++;if(rdy>=150){st='live';tl=0;acc=0}}
   else if(st==='live'){
     tl++;const L=LV[lv],rem=L.dur*60-tl;
     if(acc>=4)fail('마우스 이동 감지 ('+lastPx.toFixed(1)+'px)');
     acc*=.96;
+    if(swapT===0&&swapN<swapPlan.length&&tl>=Math.floor(L.dur*60*swapPlan[swapN].f)&&rem>SWAP[swapPlan[swapN].k].len+150)startSwap(swapPlan[swapN++].k);
+    if(swapT>0){swapT--;const k=SWAP[swapK].len-swapT;
+      if(swapK==='potato'&&k===135)beep(150,.5,'sawtooth');
+      if(swapK==='duck'&&k===200)beep(150,.5,'sawtooth');
+      if(swapK==='shutdown'&&k%60===0&&k>0&&k<=180)beep(900,.12);
+      if(swapT===0){toast=SWAP[swapK].back;toastT=170}}
     if(tl%60===0&&tl>=120&&rem>180&&Math.random()<L.p)spawn(pick(L.fx));
     if(lv>=3&&tl%90===45&&rem>180&&Math.random()<.4)spawn(pick(['toast','shake','flash']));
     if(lv===5&&tl%40===20&&rem>180&&Math.random()<.5)spawn(pick(ALL));
@@ -145,11 +206,12 @@ function draw(){
   }
   if(st==='failed'){
     g.fillStyle='#240808';g.fillRect(-20,-20,W+40,H+40);
-    txt('움직임 감지!',180,90,36,'#ff5555','#000');txt(cause,180,145,15,'#fff');
+    txt('움직임 감지!',180,90,36,'#ff5555','#000');txt(cause,180,145,cause.length>24?12:15,'#fff');
     txt((lv===5?'지옥':'STAGE '+(lv+1))+' · '+pct+'%에서 실패',180,190,18,'#ffe14d');
     txt('누적 실패 '+fails+'회',180,222,14,'#bbb');txt(pct>=85?'아깝다 ㅋㅋ':pick2(),180,252,13,'#999');
     emo('🥔',180,330,70);
     if(t>40)btn([60,400,240,46],'▶ 다시 가만히 있기','#2e8b2e');
+    if(snap>0){g.fillStyle='rgba(190,0,0,'+Math.min(.92,snap/35)+')';g.fillRect(0,0,W,H);txt('돌아와! 🧘',W/2,200,36,'#fff','#000');txt('움직였네?',W/2,252,24,'#fff','#000')}
   }
   if(st==='hellend'){g.fillStyle='#10161c';g.fillRect(-20,-20,W+40,H+40);const HQ=['지옥을 클리어했습니다.','당신은 인간이 아닙니다.','아니, 감자입니다.','이 기록은 세계에서 당신만 압니다.','진심으로 수고하셨습니다.'];const hn=Math.min(HQ.length,Math.floor(endT/200));for(let i=0;i<hn;i++)txt(HQ[i],180,120+i*50,16,i===1?'#ff9':'#dfe');if(hn>=HQ.length){emo('🏆',180,390,70);txt('총 실패 '+fails+'회',180,440,12,'#889');if(endT>1100&&t%60<40)txt('▶ 처음으로 ◀',180,466,14,'#7CFC00')}}
   if(st==='ending'){
@@ -159,6 +221,7 @@ function draw(){
     for(let i=0;i<n;i++)txt(ENDQ[i].replace('{m}',mins),180,120+i*50,i===3?18:16,i===3?'#ff9':'#dfe');
     if(n>=ENDQ.length){emo('🥔',180,400,60);txt('실패 '+fails+'회',180,440,12,'#889');if(endT>1100&&t%60<40)txt('▶ 처음으로 ◀',180,466,14,'#7CFC00')}
   }
+  if(swapT>0&&st==='live')drawSwap();
   g.restore();
 }
 function pick2(){return pick(FAILQ)}
