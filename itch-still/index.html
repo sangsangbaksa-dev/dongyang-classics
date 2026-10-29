@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="description" content="움직이면 지는 병맛 챌린지">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧘%3C/text%3E%3C/svg%3E">
 <title>가만히 감자 챌린지</title>
 <style>
 html,body{margin:0;height:100%;background:#10161c;overflow:hidden;font-family:"Comic Sans MS","Malgun Gothic",sans-serif;user-select:none;-webkit-user-select:none}
@@ -20,16 +22,21 @@ const LV=[
  {n:'방해 시작',dur:20,p:.34,fx:['toast','lie','popup','shake','bait'],q:'눈 깜빡임도 감시 중'},
  {n:'전화 왔어요',dur:30,p:.44,fx:['toast','lie','popup','shake','bait','flash','phone'],q:'엄마는 포기를 모른다'},
  {n:'응답 없음',dur:45,p:.52,fx:ALL,q:'프로그램이 응답하지 않습니다'},
- {n:'최종: 가만히 있는 감자',dur:60,p:.66,fx:ALL,q:'감자는 원래 가만히 있다'}
+ {n:'최종: 가만히 있는 감자',dur:60,p:.66,fx:ALL,q:'감자는 원래 가만히 있다'},
+ {n:'지옥',dur:90,p:.9,fx:ALL,q:'감자는 이미 가만히 있었다'}
 ];
 const TOAST=['방금 움직이셨나요?','손가락이 떨리는 게 보입니다','마우스가 의심스럽습니다','옆 사람이 당신을 보고 있습니다','숨 쉬는 소리가 큽니다','눈 깜빡임 감지됨 (괜찮음)','가렵지 않나요?','엉덩이 들썩임 감지','배터리 1%','지금 클릭하면 100만원','당신 뒤에 누가 있어요','참을 인 세 번이면 감자도 산다','방금 의자가 삐걱했는데요','오른손 가만히 있는 척 하는 중?'];
 const POPUPS=['🎉 경품 당첨! 지금 확인하세요','⚠ 바이러스 3,481개 발견','💰 월급 입금됨 (클릭)','📢 [긴급] 당신의 마우스가 의심됩니다'];
 const FAILQ=['감자는 원래 가만히 있는데','손이 먼저 나갔죠?','다시 해도 똑같을걸요','엉덩이에 불이 붙었나요','참을성 감자 미만'];
 const ENDQ=['당신은 총 {m}분 동안 가만히 있었습니다.','이 기록은 아무에게도 알려지지 않습니다.','이제 움직이셔도 됩니다.','...라고 하면 안 움직일 줄 알았죠?','수고하셨습니다.'];
+let hell=false;try{hell=localStorage.stillHell==='1'}catch(e){}
 let st='title',t=0,lv=0,tl=0,acc=0,fails=0,total=0,best=0,cause='',lastPx=0,pct=0;
 let toast='',toastT=0,off=0,popup=null,bait=null,phoneT=0,freezeT=0,fakeT=0,flipT=0,flashT=0,shake=0,clrT=0,rdy=0,endT=0,last=null,frozenShown=0,lieAt=0;
 try{best=+localStorage.stillBest||0;fails=+localStorage.stillFails||0}catch(e){}
-let ac;function beep(f,d=.1,type='square',v0=.07){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(v0,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+let muted=false;try{muted=localStorage.byeongmatMute==='1'}catch(e){}
+function toggleMute(){muted=!muted;try{localStorage.byeongmatMute=muted?'1':'0'}catch(e){}if(!muted)beep(700,.1)}
+function muteIcon(){g.save();g.font='22px serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.fillText(muted?'🔇':'🔊',336,30);g.restore()}
+let ac;function beep(f,d=.1,type='square',v0=.07){if(muted)return;try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(v0,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.random()*a.length|0];
 const inR=(x,y,r)=>x>=r[0]&&x<=r[0]+r[2]&&y>=r[1]&&y<=r[1]+r[3];
 function txt(s,x,y,size,col,out){g.font='bold '+size+'px "Comic Sans MS","Malgun Gothic",sans-serif';g.textAlign='center';g.textBaseline='middle';if(out){g.strokeStyle=out;g.lineWidth=5;g.lineJoin='round';g.strokeText(s,x,y)}g.fillStyle=col;g.fillText(s,x,y)}
@@ -59,7 +66,7 @@ function spawn(fx){
 }
 function clearLevel(){
   st='clear';clrT=0;beep(880,.15);setTimeout(()=>beep(1320,.25),120);
-  if(lv+1>best){best=lv+1;try{localStorage.stillBest=best}catch(e){}}
+  if(lv<5&&lv+1>best){best=lv+1;try{localStorage.stillBest=best}catch(e){}}
 }
 function update(){
   t++;if(shake>0)shake--;
@@ -70,7 +77,8 @@ function update(){
     acc*=.96;
     if(tl%60===0&&tl>=120&&rem>180&&Math.random()<L.p)spawn(pick(L.fx));
     if(lv>=3&&tl%90===45&&rem>180&&Math.random()<.4)spawn(pick(['toast','shake','flash']));
-    if(lv===4&&rem===600){toast='...라고 생각했지?';toastT=200}
+    if(lv===5&&tl%40===20&&rem>180&&Math.random()<.5)spawn(pick(ALL));
+    if(lv>=4&&rem===600){toast='...라고 생각했지?';toastT=200}
     if(toastT>0)toastT--;
     if(popup){popup.t--;if(popup.t<=0)popup=null}
     if(bait){bait.t--;if(bait.t<=0)bait=null}
@@ -79,12 +87,12 @@ function update(){
     if(flipT>0)flipT--;if(flashT>0)flashT--;
     if(rem<=0)clearLevel();
   }
-  else if(st==='clear'){clrT++;if(clrT>150){if(lv>=4){st='ending';endT=0}else{lv++;startReady()}}}
-  else if(st==='ending')endT++;
+  else if(st==='clear'){clrT++;if(clrT>150){if(lv===5){st='hellend';endT=0;hell=true;try{localStorage.stillHell='1'}catch(e){}}else if(lv===4){st='ending';endT=0}else{lv++;startReady()}}}
+  else if(st==='ending'||st==='hellend')endT++;
   else if(st==='failed'){}
 }
 function shown(){const L=LV[lv];const real=(L.dur*60-tl)/60;let s=real+off*Math.max(0,1-(tl-lieAt)/300);
-  if(lv===4&&real<10)return .1;return Math.max(.1,s)}
+  if(lv>=4&&real<10)return .1;return Math.max(.1,s)}
 function draw(){
   g.save();
   if(shake>0)g.translate((Math.random()-.5)*shake*.5,(Math.random()-.5)*shake*.5);
@@ -96,9 +104,10 @@ function draw(){
     emo('🥔',180,80,70);txt('가만히 감자 챌린지',180,150,30,'#ffe14d','#000');txt('움직이지 마!',180,190,24,'#ff6b6b','#000');
     g.fillStyle='#1f2a35';g.fillRect(24,220,312,190);
     ['마우스 · 키보드 · 클릭 · 스크롤 · 탭 전환','전부 금지입니다.','숨 쉬는 건 허용 (아직은)','5스테이지 · 총 165초','방해는 점점 심해집니다. 이유는 없습니다.'].forEach((l,i)=>txt(l,180,240+i*30,i===1?17:14,i===1?'#ff9':'#cfe'));
-    txt(best?'최고 기록: STAGE '+best+' 클리어':'기록 없음',180,435,13,'#899');
-    txt('모바일은 화면에서 손만 떼면 됩니다',180,455,11,'#667');
-    if(t%60<40)txt('▶ 클릭하면 시작 (마지막 클릭입니다) ◀',180,472,13,'#7CFC00');
+    txt(best?'최고 기록: STAGE '+best+' 클리어'+(hell?' · 🏆 지옥 클리어':''):'기록 없음',180,383,13,'#899');
+    txt('모바일은 화면에서 손만 떼면 됩니다',180,400,11,'#667');
+    if(best>=5){g.fillStyle='#8b1a1a';g.fillRect(85,424,190,28);g.strokeStyle='#000';g.lineWidth=2;g.strokeRect(85,424,190,28);txt('🔥 지옥 스테이지 (90초)',180,438,14,'#fff')}
+    if(t%60<40)txt('▶ 클릭하면 시작 (마지막 클릭입니다) ◀',180,472,13,'#7CFC00');muteIcon();
   }
   if(live||st==='clear'){
     const L=LV[lv];
@@ -106,7 +115,7 @@ function draw(){
     const frozen=freezeT>0;
     if(frozen)frozenShown=frozenShown||rem;else frozenShown=0;
     const dispRem=frozen?frozenShown:rem;
-    txt('STAGE '+(lv+1)+'/5  '+L.n,180,26,15,'#355');
+    txt(lv===5?'🔥 지옥 스테이지':'STAGE '+(lv+1)+'/5  '+L.n,180,26,15,'#355');
     const br=1+(frozen?0:.025*Math.sin(t/38));
     g.save();g.translate(180,250);g.scale(br,br);emo('🧘',0,0,130);g.restore();
     if(st==='live'||st==='ready'){
@@ -127,17 +136,18 @@ function draw(){
     else if(fakeT>0){g.fillStyle='#fff3a0';g.fillRect(0,0,W,H);txt('...라고 생각했지?',180,220,28,'#a33');txt('계속하세요',180,264,16,'#555')}
     if(flashT>0){g.fillStyle='rgba(255,255,255,'+Math.min(1,flashT/10)+')';g.fillRect(-20,-20,W+40,H+40)}
     if(st==='clear'){
-      g.fillStyle='rgba(0,0,0,.65)';g.fillRect(0,150,W,170);txt('STAGE '+(lv+1)+' CLEAR',180,200,32,'#7CFC00','#000');txt(lv<4?'다음 스테이지는 더 시끄럽습니다':'...정말로?',180,248,15,'#fff');txt('(아직 움직이면 안 됩니다)',180,278,12,'#9ab')
+      g.fillStyle='rgba(0,0,0,.65)';g.fillRect(0,150,W,170);txt((lv===5?'지옥':'STAGE '+(lv+1))+' CLEAR',180,200,32,'#7CFC00','#000');txt(lv<4?'다음 스테이지는 더 시끄럽습니다':lv===4?'...정말로?':'진짜로 끝났습니다 (이번엔)',180,248,15,'#fff');txt('(아직 움직이면 안 됩니다)',180,278,12,'#9ab')
     }
   }
   if(st==='failed'){
     g.fillStyle='#240808';g.fillRect(-20,-20,W+40,H+40);
     txt('움직임 감지!',180,90,36,'#ff5555','#000');txt(cause,180,145,15,'#fff');
-    txt('STAGE '+(lv+1)+' · '+pct+'%에서 실패',180,190,18,'#ffe14d');
+    txt((lv===5?'지옥':'STAGE '+(lv+1))+' · '+pct+'%에서 실패',180,190,18,'#ffe14d');
     txt('누적 실패 '+fails+'회',180,222,14,'#bbb');txt(pct>=85?'아깝다 ㅋㅋ':pick2(),180,252,13,'#999');
     emo('🥔',180,330,70);
     if(t>40)btn([60,400,240,46],'▶ 다시 가만히 있기','#2e8b2e');
   }
+  if(st==='hellend'){g.fillStyle='#10161c';g.fillRect(-20,-20,W+40,H+40);const HQ=['지옥을 클리어했습니다.','당신은 인간이 아닙니다.','아니, 감자입니다.','이 기록은 세계에서 당신만 압니다.','진심으로 수고하셨습니다.'];const hn=Math.min(HQ.length,Math.floor(endT/200));for(let i=0;i<hn;i++)txt(HQ[i],180,120+i*50,16,i===1?'#ff9':'#dfe');if(hn>=HQ.length){emo('🏆',180,390,70);txt('총 실패 '+fails+'회',180,440,12,'#889');if(endT>1100&&t%60<40)txt('▶ 처음으로 ◀',180,466,14,'#7CFC00')}}
   if(st==='ending'){
     g.fillStyle='#10161c';g.fillRect(-20,-20,W+40,H+40);
     const mins=Math.max(1,Math.round((165+0)/60*10)/10);
@@ -153,11 +163,11 @@ addEventListener('pointermove',e=>{if(st!=='live')return;const d=Math.hypot(e.mo
 addEventListener('pointerdown',e=>{
   const [x,y]=xy(e);
   if(st==='live'){fail('클릭 감지');return}
-  if(st==='title'){lv=0;startReady();return}
+  if(st==='title'){if(Math.hypot(x-336,y-30)<20){toggleMute();return}if(best>=5&&inR(x,y,[85,424,190,28])){lv=5;startReady();return}lv=0;startReady();return}
   if(st==='failed'&&t>40&&inR(x,y,[60,400,240,46])){startReady();return}
-  if(st==='ending'&&endT>1100){st='title';lv=0;t=0}
+  if((st==='ending'||st==='hellend')&&endT>1100){st='title';lv=0;t=0}
 });
-addEventListener('keydown',e=>{if(st==='live'){e.preventDefault();fail('키보드 입력 감지')}});
+addEventListener('keydown',e=>{if(st==='live'){e.preventDefault();fail('키보드 입력 감지')}else if(e.code==='KeyM')toggleMute()});
 addEventListener('wheel',e=>{if(st==='live')fail('스크롤 감지')},{passive:true});
 addEventListener('contextmenu',e=>{e.preventDefault();if(st==='live')fail('우클릭 감지')});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&st==='live')fail('탭을 떠남 (도망)')});

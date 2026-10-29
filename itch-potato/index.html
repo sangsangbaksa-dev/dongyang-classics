@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="description" content="초저퀄 병맛 플래피 게임">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>출근하는 감자 DX: 극한 출근</title>
 <style>
 html,body{margin:0;height:100%;background:#222;overflow:hidden;font-family:"Comic Sans MS","Malgun Gothic",sans-serif;touch-action:manipulation;user-select:none}
@@ -43,7 +45,10 @@ function saveGame(){try{localStorage.potatoSave2=JSON.stringify({stage,hp:bossHP
 function clearSave(){try{localStorage.removeItem('potatoSave2')}catch(e){}saved=null}
 function say(s){msg=s;msgT=150}
 for(let i=0;i<14;i++)rain.push({x:Math.random()*W,y:Math.random()*H,v:1+Math.random()*2});
-let ac;function beep(f,d=.1,type='square'){try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(.08,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+let muted=false;try{muted=localStorage.byeongmatMute==='1'}catch(e){}
+function toggleMute(){muted=!muted;try{localStorage.byeongmatMute=muted?'1':'0'}catch(e){}if(!muted)beep(700,.1)}
+function muteIcon(){g.save();g.font='22px serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.fillText(muted?'🔇':'🔊',336,30);g.restore()}
+let ac;function beep(f,d=.1,type='square'){if(muted)return;try{ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(.08,ac.currentTime);v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(v);v.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 const fmt=f=>{const s=Math.floor(f/60);return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 const pct=()=>stage<5?Math.min(99,Math.floor(100*stageT/STAGE_FR)):Math.min(99,Math.floor(100*(1-(bossHP+(ph===1?BOSS_HP:0))/(BOSS_HP*2))));
 function respawn(){cameos=[];flipT=0;x=80;y=220;vy=0;pipes=[];items=[];bosses=[];shots=[];bullets=[];lagQ=[];coffee=45;gdir=1;flip=false;ad=0;if(stage<5)stageT=0;st='play';bannerT=0}
@@ -58,7 +63,7 @@ function nextStage(){
   if(stage===5){st='fake';fakeT=0;bossHP=BOSS_HP;ph=1;bt=0}else bannerT=240;
 }
 function press(px,py){
-  if(st==='title'){startRun(true);return}
+  if(st==='title'){if(Math.hypot(px-336,py-30)<20){toggleMute();return}startRun(true);return}
   if(st==='load'||st==='fake'||st==='fake2'||st==='adwatch')return;
   if(st==='dead'){
     if(t<30)return;
@@ -74,6 +79,7 @@ c.addEventListener('pointerdown',e=>{const r=c.getBoundingClientRect();press((e.
 addEventListener('keydown',e=>{
   if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();press(-1,-1)}
   if(e.code==='KeyN'&&st==='title'){startRun(false)}
+  if(e.code==='KeyM')toggleMute();
 });
 function die(why){
   if(st!=='play')return;
@@ -222,7 +228,7 @@ function draw(){
     outline(stage===5?'대파 대왕 (대표이사)':STAGES[stage].n,W/2,243,20,'#fff');
     g.font='13px sans-serif';g.fillStyle='#ccc';g.fillText(stage===5?'💼 자동발사 · 💰=-3 · ☕=무적':STAGES[stage].sub,W/2,267);g.globalAlpha=1}
   if(st==='title'){
-    g.fillStyle='rgba(0,0,0,.68)';g.fillRect(20,60,320,360);
+    g.fillStyle='rgba(0,0,0,.68)';g.fillRect(20,60,320,360);muteIcon();
     g.fillStyle='#ffe14d';g.font='bold 34px Comic Sans MS';g.fillText('출근하는 감자',W/2,110);
     g.fillStyle='#ff6b6b';g.font='bold 26px Comic Sans MS';g.fillText('DX : 극한 출근',W/2,146);
     g.fillStyle='#fff';g.font='15px sans-serif';
